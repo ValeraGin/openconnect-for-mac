@@ -19,6 +19,10 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         testReopenAndDiscardFlows()
         testAllFixturesHaveConsistentSelectionAndActiveProfile()
         testConnectionErrorBelongsToItsOwnProfile()
+        testSignInRequiresPasswordAndCode()
+        testCancelledSwitchPreservesActiveConnection()
+        testCredentialEditorChangesOnlyItsOwnDraft()
+        testSingleLineValuesDoNotAcceptNewlines()
         print("\(checks - failures) passed; \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -82,11 +86,101 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         model.select("home")
         checkEqual(model.selectedLink, .idle)
         model.toggleConnection()
+        checkEqual(model.selectedLink, .signIn)
+        model.continueSSO()
+        model.authPassword = "demo"
+        model.submitPassword()
+        model.authCode = "123456"
+        model.submitCode()
         checkEqual(model.activeID, "home")
         model.select("work")
         checkEqual(model.selectedLink, .idle)
         model.reopen()
         checkEqual(model.selectedID, "home")
         checkEqual(model.selectedLink, .connected)
+    }
+
+    static func testSignInRequiresPasswordAndCode() {
+        let model = DemoModel()
+        model.beginSignIn()
+        check(model.authPresented)
+        checkEqual(model.authStage, .sso)
+        checkNil(model.activeID)
+        model.submitCode()
+        checkNil(model.activeID)
+        model.continueSSO()
+        model.authPassword = "wrong"
+        model.toggleConnection()
+        checkEqual(model.authPassword, "wrong")
+        checkEqual(model.authStage, .password)
+        model.submitPassword()
+        check(model.authError)
+        checkEqual(model.authStage, .password)
+        model.authPassword = "demo"
+        model.submitPassword()
+        checkFalse(model.authError)
+        checkEqual(model.authStage, .code)
+        checkEqual(model.authPassword, "")
+        model.authCode = "000000"
+        model.submitCode()
+        check(model.authError)
+        checkNil(model.activeID)
+        model.authStage = .expired
+        model.authCode = "123456"
+        model.submitCode()
+        checkNil(model.activeID)
+        model.restartCode()
+        checkEqual(model.authCode, "")
+        model.authCode = "123456"
+        model.select("home")
+        model.submitCode()
+        checkEqual(model.activeID, "work")
+        checkEqual(model.authStage, .success)
+        checkEqual(model.authCode, "")
+        model.cancelSignIn()
+        checkEqual(model.activeID, "work")
+        checkFalse(model.authPresented)
+    }
+    static func testCancelledSwitchPreservesActiveConnection() {
+        let model = DemoModel()
+        model.load(.connected)
+        model.select("home")
+        model.beginSignIn()
+        checkEqual(model.activeID, "work")
+        model.authPassword = "sample"
+        model.cancelSignIn()
+        checkEqual(model.activeID, "work")
+        checkEqual(model.authPassword, "")
+        checkEqual(model.selectedLink, .idle)
+        model.draft?.name = "unsaved"
+        model.beginSignIn()
+        checkFalse(model.authPresented)
+    }
+    static func testCredentialEditorChangesOnlyItsOwnDraft() {
+        let model = DemoModel()
+        model.select("home")
+        model.openCredential(.credentialPassword)
+        model.authPassword = "wrong"
+        model.saveCredential()
+        check(model.authError)
+        checkFalse(model.draft!.passwordSaved)
+        model.authPassword = "demo"
+        model.saveCredential()
+        check(model.draft!.passwordSaved)
+        check(model.dirty)
+        checkEqual(model.authPassword, "")
+        checkFalse(model.profiles[1].passwordSaved)
+        model.select("work")
+        model.openCredential(.credentialCode)
+        model.select("home")
+        model.authCode = "123456"
+        model.saveCredential()
+        checkFalse(model.draft!.codeSaved)
+        checkFalse(model.authPresented)
+    }
+    static func testSingleLineValuesDoNotAcceptNewlines() {
+        checkEqual(DemoModel.singleLine("https://vpn.\nexample.com"), "https://vpn.example.com")
+        checkEqual(DemoModel.singleLine("long\r\nname\u{2028}end"), "longnameend")
+        checkEqual(DemoModel.singleLine(String(repeating: "a", count: 200)), String(repeating: "a", count: 200))
     }
 }

@@ -62,6 +62,11 @@ struct LabView: View {
             ForEach(Page.allCases.filter { $0 != .general }, id: \.self) { item in nav(item) }
             Divider().padding(.horizontal, 12).padding(.vertical, 14)
             nav(.general)
+            Button { model.aboutPresented = true } label: {
+                IconLabel(title: text("О приложении", "About"), icon: "info")
+                    .font(.system(size: 12)).frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 9).padding(.vertical, 9)
+            }.buttonStyle(.plain).padding(.horizontal, 8)
             Spacer()
             Text(text("Новый интерфейс\nТестовые данные", "New interface\nSample data"))
                 .font(.system(size: 11)).foregroundStyle(.secondary).padding(16)
@@ -72,12 +77,13 @@ struct LabView: View {
     }
     private func nav(_ page: Page) -> some View {
         Button { model.page = page } label: {
-            Label(model.title(page), systemImage: page.icon)
+            IconLabel(title: model.title(page), icon: page.icon)
                 .font(.system(size: 12, weight: model.page == page ? .semibold : .regular))
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 9).padding(.vertical, 9)
-                .background(model.page == page ? Color.primary.opacity(0.09) : .clear,
+                .foregroundStyle(model.page == page ? LabColor.accent : .primary)
+                .background(model.page == page ? LabColor.accent.opacity(0.12) : .clear,
                             in: RoundedRectangle(cornerRadius: 6))
                 .contentShape(Rectangle())
         }
@@ -101,7 +107,7 @@ struct LabView: View {
                     .labelsHidden().accessibilityLabel(text("Профиль", "Profile"))
                     .frame(maxWidth: .infinity).help(model.draft?.name ?? "")
             }
-            Button { model.add() } label: { Image(systemName: "plus") }
+            Button { model.add() } label: { Lucide(name: "plus", size: 16) }
                 .disabled(model.dirty)
                 .help(text("Добавить профиль", "Add profile"))
                 .accessibilityLabel(text("Добавить профиль", "Add profile"))
@@ -128,7 +134,7 @@ struct LabView: View {
     }
     private var empty: some View {
         VStack(spacing: 12) {
-            Image(systemName: "network.badge.shield.half.filled").font(.system(size: 36)).foregroundStyle(.secondary)
+            Lucide(name: "shield", size: 40).foregroundStyle(LabColor.accent)
             Text(text("Добавьте первый профиль", "Add your first profile")).font(.headline)
             Text(text("Нужны адрес VPN и имя пользователя.", "You’ll need a VPN address and a username."))
                 .foregroundStyle(.secondary)
@@ -143,19 +149,23 @@ struct LabView: View {
                     if model.selectedLink == .connecting {
                         ProgressView().controlSize(.small).frame(width: 28)
                     } else {
-                        Image(systemName: statusIcon).font(.system(size: 23)).foregroundStyle(.secondary)
+                        Lucide(name: statusIcon, size: 24).foregroundStyle(statusColor)
+                            .frame(width: 40, height: 40)
+                            .background(statusColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
                     }
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(statusTitle).fontWeight(.semibold)
+                        Text(statusTitle).fontWeight(.semibold).foregroundStyle(statusColor)
                         Text(statusDetail).font(.system(size: 12)).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 8)
                     Button(connectionAction) { model.toggleConnection() }
+                        .buttonStyle(.borderedProminent).tint(LabColor.accent)
                         .disabled(model.dirty || !model.valid)
                 }.padding(.vertical, 5)
                 if model.scenario == .proxyWarning && model.activeID == model.selectedID {
-                    Label(text("Системный SOCKS не включён. Порт 1080 занят.", "System SOCKS is off. Port 1080 is already in use."), systemImage: "exclamationmark.triangle")
+                    IconLabel(title: text("Системный SOCKS не включён. Порт 1080 занят.", "System SOCKS is off. Port 1080 is already in use."), icon: "triangle-alert")
+                        .foregroundStyle(LabColor.warning)
                         .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
                     Button(text("Открыть настройки сети", "Open network settings")) { model.page = .network }
                         .buttonStyle(.link)
@@ -179,24 +189,33 @@ struct LabView: View {
         }
     }
     private func profileField(_ label: String, key: WritableKeyPath<DemoProfile, String>) -> some View {
-        let value = model.draft?[keyPath: key] ?? ""
-        let lines = value.components(separatedBy: "\n").reduce(0) { $0 + max(1, Int(ceil(Double($1.count) / 38))) }
-            + (value.count > 38 ? 1 : 0)
-        return HStack(alignment: .top, spacing: 12) {
-            Text(label).font(.system(size: 12)).frame(width: 88, alignment: .leading).padding(.top, 3)
-            TextEditor(text: field(key, fallback: ""))
-                .font(.system(size: 13))
-                .scrollContentBackground(.hidden)
-                .frame(height: CGFloat(min(88, max(26, lines * 17 + 10))))
+        HStack(alignment: .center, spacing: 12) {
+            Text(label).font(.system(size: 12)).frame(width: 88, alignment: .leading)
+            SingleLineInput(text: field(key, fallback: ""), label: label).frame(height: 26)
+        }.frame(maxWidth: .infinity)
+    }
+    private var routesField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(text("Подсети", "Subnets")).font(.system(size: 12))
+            TextEditor(text: field(\.routes, fallback: ""))
+                .font(.system(size: 12, design: .monospaced)).scrollContentBackground(.hidden)
+                .frame(height: 66).padding(4)
                 .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 5))
                 .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.primary.opacity(0.16)))
-                .accessibilityLabel(label)
+                .accessibilityLabel(text("Подсети, по одной на строку", "Subnets, one per line"))
         }
-        .frame(maxWidth: .infinity)
+    }
+    private var statusColor: Color {
+        if model.activeID == model.selectedID { return LabColor.success }
+        if model.selectedLink == .failed { return LabColor.failure }
+        if !model.valid { return LabColor.warning }
+        if model.selectedLink == .connecting || model.selectedLink == .signIn { return LabColor.accent }
+        return .secondary
     }
     private var statusTitle: String {
         if model.activeID == model.selectedID { return text("Подключено", "Connected") }
         if model.selectedLink == .connecting { return text("Подключаемся…", "Connecting…") }
+        if model.selectedLink == .signIn { return text("Ожидается вход", "Sign-in required") }
         if model.selectedLink == .failed { return text("Не удалось подключиться", "Couldn’t connect") }
         if !model.valid { return text("Заполните профиль", "Complete the profile") }
         return text("Не подключено", "Disconnected")
@@ -204,18 +223,20 @@ struct LabView: View {
     private var statusDetail: String {
         if model.activeID == model.selectedID { return text("Соединение установлено · 12 мин", "Connection established · 12 min") }
         if model.selectedLink == .connecting { return text("Ожидаем ответ сервера", "Waiting for the server") }
+        if model.selectedLink == .signIn { return text("Завершите вход в открытом окне", "Complete sign-in in the open window") }
         if model.selectedLink == .failed { return text("Сервер не отвечает", "The server is not responding") }
         if !model.valid { return text("Для подключения нужны корректные параметры", "Valid settings are required to connect") }
         return text("Готово к подключению", "Ready to connect")
     }
     private var statusIcon: String {
-        if model.activeID == model.selectedID { return "checkmark.shield" }
-        if model.selectedLink == .failed { return "exclamationmark.triangle" }
-        return model.selectedLink == .connecting ? "arrow.triangle.2.circlepath" : "network"
+        if model.activeID == model.selectedID { return "shield-check" }
+        if model.selectedLink == .failed { return "triangle-alert" }
+        return model.selectedLink == .signIn ? "log-in" : "network"
     }
     private var connectionAction: String {
         if model.activeID == model.selectedID { return text("Отключить", "Disconnect") }
         if model.selectedLink == .connecting { return text("Отменить", "Cancel") }
+        if model.selectedLink == .signIn { return text("Войти", "Sign in") }
         if model.selectedLink == .failed { return text("Повторить", "Retry") }
         return text("Подключить", "Connect")
     }
@@ -231,21 +252,34 @@ struct LabView: View {
                      : text("Пароль используется для входа на сервер VPN.", "Your password is used to sign in to the VPN server."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
-            Section(text("Сохранённые данные", "Saved credentials")) {
-                credential(text("Пароль", "Password"), key: \.passwordSaved)
-                credential(text("Одноразовый код", "One-time code"), key: \.codeSaved)
+            Section(text("Окно входа", "Sign-in window")) {
+                HStack {
+                    IconLabel(title: text("Проверить вход в профиль", "Try signing in to this profile"), icon: "log-in")
+                        .font(.system(size: 12)).foregroundStyle(LabColor.accent)
+                    Spacer(minLength: 8)
+                    Button(text("Открыть", "Open")) { model.beginSignIn() }
+                        .buttonStyle(.borderedProminent).tint(LabColor.accent).disabled(model.dirty || !model.valid)
+                }
+                Text(model.dirty
+                     ? text("Сначала сохраните изменения профиля.", "Save profile changes first.")
+                     : text("Вход → одноразовый код → подключение. Пароль demo, код 123456.", "Sign-in → one-time code → connection. Password demo, code 123456."))
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
             }
-            Text(text("В демо эти кнопки меняют только тестовое состояние. Реальные пароли не запрашиваются.", "These demo buttons only change sample state. No real passwords are requested."))
+            Section(text("Сохранённые данные", "Saved credentials")) {
+                credential(text("Пароль", "Password"), key: \.passwordSaved, stage: .credentialPassword)
+                credential(text("Одноразовый код", "One-time code"), key: \.codeSaved, stage: .credentialCode)
+            }
+            Text(text("Изменение пароля и кода открывается в отдельном окне. Используйте только тестовые данные.", "Passwords and codes are edited in a separate window. Use sample data only."))
                 .font(.system(size: 12)).foregroundStyle(.secondary)
         }
     }
-    private func credential(_ label: String, key: WritableKeyPath<DemoProfile, Bool>) -> some View {
+    private func credential(_ label: String, key: WritableKeyPath<DemoProfile, Bool>, stage: AuthStage) -> some View {
         LabeledContent(label) {
             HStack {
                 Text(model.draft?[keyPath: key] == true ? text("Сохранён", "Saved") : text("Не сохранён", "Not saved"))
-                    .foregroundStyle(.secondary)
-                Button(model.draft?[keyPath: key] == true ? text("Удалить", "Remove") : text("Добавить", "Add")) {
-                    model.draft?[keyPath: key].toggle()
+                    .foregroundStyle(model.draft?[keyPath: key] == true ? LabColor.success : .secondary)
+                Button(model.draft?[keyPath: key] == true ? text("Изменить…", "Edit…") : text("Добавить…", "Add…")) {
+                    model.openCredential(stage)
                 }
             }
         }
@@ -261,7 +295,7 @@ struct LabView: View {
             }
             if model.draft?.route == .selected {
                 Section(text("Выбранные сети", "Selected networks")) {
-                    profileField(text("Подсети", "Subnets"), key: \.routes)
+                    routesField
                     profileField(text("Домены DNS", "DNS domains"), key: \.dns)
                 }
                 Text(text("Остальной трафик идёт напрямую. По одной подсети на строку.", "Other traffic connects directly. Enter one subnet per line."))
@@ -269,7 +303,7 @@ struct LabView: View {
             } else if model.draft?.route == .proxy {
                 Section(text("SOCKS-прокси", "SOCKS proxy")) {
                     profileField(text("Порт", "Port"), key: \.port)
-                    Toggle(text("Использовать в настройках macOS", "Use in macOS network settings"), isOn: field(\.systemProxy, fallback: false))
+                    Toggle(text("Использовать в настройках macOS", "Use in macOS network settings"), isOn: field(\.systemProxy, fallback: false)).tint(LabColor.accent)
                 }
                 Text(text("VPN доступен приложениям, настроенным на этот прокси.", "VPN is available to apps configured to use this proxy."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
@@ -282,7 +316,7 @@ struct LabView: View {
     private var advanced: some View {
         Group {
             Section(text("Поведение соединения", "Connection behavior")) {
-                Toggle(text("Восстанавливать при обрыве", "Reconnect if interrupted"), isOn: field(\.reconnect, fallback: true))
+                Toggle(text("Восстанавливать при обрыве", "Reconnect if interrupted"), isOn: field(\.reconnect, fallback: true)).tint(LabColor.accent)
             }
             Section(text("Сертификат", "Certificate")) {
                 profileField(text("Отпечаток", "Fingerprint"), key: \.certificate)
@@ -294,7 +328,7 @@ struct LabView: View {
     private var general: some View {
         Form {
             Section {
-                Toggle(text("Запускать при входе в macOS", "Launch when signing in to macOS"), isOn: $model.launchAtLogin)
+                Toggle(text("Запускать при входе в macOS", "Launch when signing in to macOS"), isOn: $model.launchAtLogin).tint(LabColor.accent)
                 Picker(text("Язык", "Language"), selection: $model.language) {
                     Text("Русский").tag(Language.ru)
                     Text("English").tag(Language.en)
@@ -321,7 +355,8 @@ struct LabView: View {
                     .font(.system(size: 11)).foregroundStyle(.secondary)
                 Spacer(minLength: 4)
                 Button(text("Отменить", "Revert")) { model.select(model.selectedID) }.disabled(!model.dirty)
-                Button(text("Сохранить", "Save")) { _ = model.save() }.disabled(!model.dirty)
+                Button(text("Сохранить", "Save")) { _ = model.save() }
+                    .buttonStyle(.borderedProminent).tint(LabColor.accent).disabled(!model.dirty)
             }
         }.padding(.horizontal, 22).padding(.bottom, 16)
     }
@@ -337,7 +372,7 @@ struct LabView: View {
     }
     private var testControls: some View {
         HStack(spacing: 12) {
-            Label("Demo", systemImage: "flask").font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+            IconLabel(title: "Demo", icon: "flask-conical").font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
             Menu {
                 ForEach(Scenario.allCases, id: \.self) { scenario in
                     Button(model.title(scenario)) { model.load(scenario) }
@@ -353,10 +388,10 @@ struct LabView: View {
                 Text(text("Тёмное", "Dark")).tag("dark")
             }.labelsHidden().frame(width: 90)
             Spacer(minLength: 0)
-            Button { model.reopen() } label: { Image(systemName: "arrow.up.forward.app") }
+            Button { model.reopen() } label: { Lucide(name: "square-arrow-out-up-right", size: 14) }
                 .disabled(model.dirty)
                 .help(text("Открыть настройки заново: активный или последний профиль", "Reopen settings: active or last selected profile"))
-            Button { showReset = true } label: { Image(systemName: "arrow.counterclockwise") }
+            Button { showReset = true } label: { Lucide(name: "rotate-ccw", size: 14) }
                 .help(text("Сбросить демо", "Reset demo"))
         }
         .controlSize(.small).padding(.horizontal, 14).padding(.vertical, 10)

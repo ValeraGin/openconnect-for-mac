@@ -7,17 +7,19 @@ enum Page: String, CaseIterable {
     var icon: String {
         switch self {
         case .connection: return "network"
-        case .login: return "person.crop.circle"
-        case .network: return "point.3.connected.trianglepath.dotted"
-        case .advanced: return "slider.horizontal.3"
-        case .general: return "gearshape"
+        case .login: return "log-in"
+        case .network: return "route"
+        case .advanced: return "sliders-horizontal"
+        case .general: return "settings"
         }
     }
 }
 enum Scenario: String, CaseIterable {
     case idle, connected, connecting, error, empty, single, many, long, missing, unsaved, proxyWarning
+    case signInSSO, signInPassword, signInCode, signInRejected, signInExpired, signInSuccess
+    case credentialPassword, credentialCode, about
 }
-enum LinkState { case idle, connecting, connected, failed }
+enum LinkState { case idle, connecting, signIn, connected, failed }
 enum RouteMode: String, CaseIterable { case all, selected, proxy }
 struct DemoProfile: Identifiable, Equatable {
     var id: String
@@ -54,6 +56,15 @@ final class DemoModel: ObservableObject {
     @Published var notice = ""
     @Published var appearance = "system"
     @Published var launchAtLogin = false
+    @Published var authPresented = false
+    @Published var aboutPresented = false
+    @Published var authStage: AuthStage = .sso
+    @Published var authTargetID: String?
+    @Published var authUsername = ""
+    @Published var authPassword = ""
+    @Published var authCode = ""
+    @Published var authError = false
+    @Published var aboutLicenses = false
     private let preferences: UserDefaults?
     private var lastSelected: String?
 
@@ -86,6 +97,15 @@ final class DemoModel: ObservableObject {
         case .missing: return t("Нужны данные", "Missing fields")
         case .unsaved: return t("Есть изменения", "Unsaved changes")
         case .proxyWarning: return t("Ошибка SOCKS", "SOCKS warning")
+        case .signInSSO: return t("Вход: SSO", "Sign-in: SSO")
+        case .signInPassword: return t("Вход: пароль", "Sign-in: password")
+        case .signInCode: return t("Вход: код", "Sign-in: code")
+        case .signInRejected: return t("Вход: ошибка", "Sign-in: rejected")
+        case .signInExpired: return t("Вход: код истёк", "Sign-in: expired")
+        case .signInSuccess: return t("Вход: успех", "Sign-in: success")
+        case .credentialPassword: return t("Настройка пароля", "Save password")
+        case .credentialCode: return t("Настройка кода", "Save one-time code")
+        case .about: return t("О приложении", "About")
         }
     }
     var dirty: Bool {
@@ -151,12 +171,16 @@ final class DemoModel: ObservableObject {
             activeID = nil; link = .idle
         } else if selectedLink == .connecting {
             link = .idle
+        } else if selectedLink == .signIn && authTargetID == selectedID {
+            authPresented = true
         } else {
-            activeID = selectedID; linkTarget = selectedID; link = .connected
+            beginSignIn()
         }
     }
     func load(_ scenario: Scenario) {
         self.scenario = scenario
+        authPresented = false; aboutPresented = false; aboutLicenses = false
+        authPassword = ""; authCode = ""; authError = false
         profiles = [
             DemoProfile(id: "work", name: t("Работа", "Work"), server: "https://vpn.example.com", user: "alex", passwordSaved: true, codeSaved: true),
             DemoProfile(id: "home", name: t("Дом", "Home"), server: "https://home.example.com", user: "alex", route: .all),
@@ -182,5 +206,7 @@ final class DemoModel: ObservableObject {
         select(Self.initialSelection(ids: profiles.map(\.id), active: activeID, last: scenario == .idle ? lastSelected : nil))
         if scenario == .unsaved { draft?.user = "alex.updated" }
         if scenario == .missing { showValidation = true }
+        loadAuthFixture(scenario)
+        if scenario == .about { aboutPresented = true }
     }
 }

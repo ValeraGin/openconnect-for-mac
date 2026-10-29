@@ -20,12 +20,32 @@ switching profiles; invalid edits cannot be saved or connected.
 The bottom **Demo** strip controls scenarios, language (RU/EN), and appearance.
 The arrow-in-window button simulates reopening settings; reset restores the
 current fixture. These are laboratory controls, not part of the proposed product.
-Connect, saved-credential buttons and launch-at-login only change in-memory state.
-Connecting completes immediately; choose the Connecting fixture to study its
-intermediate state. Profile additions and edits are intentionally disposable.
+Connect opens a separate sign-in window. Follow SSO → password → code → success,
+or choose Password as the profile's sign-in method. Use the synthetic password
+`demo` and code `123456`. Wrong values show errors; expired codes can be retried.
+Only completing verification connects the synthetic profile. Cancelling a switch
+keeps the previous profile connected. No external browser or network is opened.
+The saved-credential buttons open editors; their changes remain in the draft
+until Save is pressed. Launch-at-login changes in-memory state only.
+Profile additions and edits are intentionally disposable.
 
 Scenarios: disconnected, connected, connecting, server error, no profiles, one
-profile, 20 profiles, long values, missing fields, unsaved changes, SOCKS warning.
+profile, 20 profiles, long values, missing fields, unsaved changes, SOCKS warning;
+SSO, password, one-time code, rejected sign-in, expired code, successful sign-in;
+password and code editors, and About. The 440 × 540 sign-in and About windows
+open from settings; About is also available in the application menu.
+
+Name, URL, username, DNS domains, port and fingerprint use native single-line
+NSTextFields. Long values scroll during editing and have full-value tooltips.
+Only the subnet list is multiline. Blue identifies navigation/actions; green,
+orange and red identify success, warnings and errors. Passive native controls
+still use macOS inactive styling.
+
+Icons are original Lucide SVGs from the official repository. The exact source
+commit and file list are in `Resources/Lucide/SOURCE.json`; original ISC/MIT
+notices are in `Resources/Lucide/LICENSE` and included in the app's About window.
+See <https://lucide.dev/license> and <https://github.com/lucide-icons/lucide>.
+
 The prototype covers common settings to validate hierarchy and navigation; it is
 not a feature-complete replacement for the production editor.
 

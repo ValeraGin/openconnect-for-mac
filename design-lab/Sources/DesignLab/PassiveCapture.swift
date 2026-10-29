@@ -20,15 +20,18 @@ enum PassiveCapture {
         let observer = NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification,
                                                                object: NSApp, queue: .main) { _ in activated = true }
         defer { NotificationCenter.default.removeObserver(observer) }
-        let panel = Panel(contentRect: NSRect(x: 0, y: 0, width: 680, height: 620),
+        let surface = LabScreen(rawValue: argument("--screen") ?? "settings") ?? .settings
+        let panel = Panel(contentRect: NSRect(origin: .zero, size: surface.size),
                           styleMask: [.titled, .closable, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.title = "OpenConnect — Design Lab"
+        panel.title = surface == .settings ? "OpenConnect — Design Lab" : surface == .signin
+            ? model.t("Вход — OpenConnect Demo", "Sign-in — OpenConnect Demo")
+            : model.t("О приложении — OpenConnect", "About — OpenConnect")
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false
         panel.isFloatingPanel = false
         panel.ignoresMouseEvents = true
-        panel.contentView = NSHostingView(rootView: AppearanceView(model: model))
-        panel.setContentSize(NSSize(width: 680, height: 620))
+        panel.contentView = NSHostingView(rootView: AppearanceView(model: model, screen: surface))
+        panel.setContentSize(surface.size)
         panel.setFrameTopLeftPoint(NSPoint(x: screen.visibleFrame.midX - panel.frame.width / 2, y: screen.visibleFrame.maxY))
         guard screen.visibleFrame.contains(panel.frame) else { exit(2) }
         panel.orderFrontRegardless()
@@ -56,7 +59,8 @@ enum PassiveCapture {
             "active": false, "keyWindow": false, "capture": "passive-native-window",
             "displayID": displayID(screen), "scenario": model.scenario.rawValue,
             "page": model.page.rawValue, "language": model.language.rawValue,
-            "width": 680, "height": 620, "syntheticData": true]
+            "width": surface.size.width, "height": surface.size.height, "screen": surface.rawValue,
+            "syntheticData": true]
         do {
             try JSONSerialization.data(withJSONObject: metadata, options: [.prettyPrinted, .sortedKeys])
                 .write(to: output.deletingPathExtension().appendingPathExtension("json"))

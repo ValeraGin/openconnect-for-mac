@@ -1,0 +1,32 @@
+{
+  "repository": "https://github.com/lucide-icons/lucide",
+  "commit": "81875c8c42d2320fa5123b37fee3554f4ca2bddc",
+  "icons": [
+    "network",
+    "log-in",
+    "route",
+    "sliders-horizontal",
+    "settings",
+    "info",
+    "shield",
+    "shield-check",
+    "circle-alert",
+    "triangle-alert",
+    "plus",
+    "rotate-ccw",
+    "square-arrow-out-up-right",
+    "flask-conical",
+    "lock-keyhole",
+    "key-round",
+    "external-link",
+    "check",
+    "x",
+    "arrow-right",
+    "circle-check",
+    "globe",
+    "mail",
+    "copy",
+    "eye",
+    "eye-off"
+  ]
+}

@@ -15,7 +15,8 @@ APP = ROOT / '.local/design-lab/OpenConnect Design Lab.app'
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--capture-passive', action='store_true', required=True)
-    parser.add_argument('--only', help='Case name')
+    parser.add_argument('--only', action='append', help='Case name; repeat to review several')
+    parser.add_argument('--gallery-only', action='store_true', help='Rebuild the gallery from existing matching captures')
     args = parser.parse_args()
     destination = ROOT / '.local/design-lab/review'
     destination.mkdir(parents=True, exist_ok=True)
@@ -28,7 +29,11 @@ def main():
             ('many', 'connection'), ('long', 'connection'), ('missing', 'connection'),
             ('unsaved', 'connection'), ('proxyWarning', 'connection'),
             ('idle', 'login'), ('idle', 'network'), ('proxyWarning', 'network'),
-            ('idle', 'advanced'), ('idle', 'general')
+            ('idle', 'advanced'), ('idle', 'general'),
+            ('signInSSO', 'signin'), ('signInPassword', 'signin'), ('signInCode', 'signin'),
+            ('signInRejected', 'signin'), ('signInExpired', 'signin'), ('signInSuccess', 'signin'),
+            ('credentialPassword', 'signin'), ('credentialCode', 'signin'),
+            ('about', 'about'), ('about', 'licenses')
         ]:
             cases.append((f'{language}-{scenario}-{page}', language, scenario, page,
                           'dark' if language == 'en' else 'light'))
@@ -36,14 +41,17 @@ def main():
     for name, language, scenario, page, appearance in cases:
         png = destination / f'{name}.png'
         metadata = png.with_suffix('.json')
-        if not args.only or args.only == name:
+        if not args.gallery_only and (not args.only or name in args.only):
             ready = png.with_suffix('.ready.json')
             done = png.with_suffix('.capture-done')
             for path in [ready, done, png, metadata]:
                 path.unlink(missing_ok=True)
             command = ['open', '-g', '-n', '-W', str(APP), '--args', '--capture-passive',
                        '--shot', str(png), '--scenario', scenario, '--page', page,
-                       '--language', language, '--appearance', appearance]
+                       '--language', language, '--appearance', appearance,
+                       '--screen', 'signin' if page == 'signin' else 'about' if page in ['about', 'licenses'] else 'settings']
+            if page == 'licenses':
+                command += ['--licenses']
             if scenario == 'error':
                 command += ['--details']
             process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -73,19 +81,27 @@ def main():
             report = json.loads(metadata.read_text())
             if report.get('binarySHA256') != binary_hash:
                 continue
-            cards.append(f'<article><h2>{html.escape(name)}</h2><a href="{png.name}"><img src="{png.name}" loading="lazy"></a></article>')
+            cards.append(f'<article id="{name}"><h2>{html.escape(name)}</h2><a href="{png.name}"><img src="{png.name}?v={binary_hash[:12]}" loading="lazy"></a></article>')
     (destination / 'index.html').write_text('''<!doctype html><html lang="ru"><meta charset="utf-8">
 <title>OpenConnect · Новый дизайн</title><style>
 body{font:15px -apple-system,BlinkMacSystemFont,sans-serif;background:#f3f3f5;color:#242428;margin:32px auto;max-width:1440px;padding:0 24px}
 h1{font-size:28px}p{line-height:1.6;max-width:900px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(560px,1fr));gap:24px}
 article{background:white;border:1px solid #ddd;border-radius:12px;padding:16px}h2{font-size:14px;font-weight:500}img{width:100%;display:block}
-</style><h1>OpenConnect · Новый дизайн</h1>
+</style><h1>OpenConnect · Design Lab 0.2</h1>
+<p><a href="#ru-idle-connection">Подключение</a> · <a href="#ru-idle-login">Настройки входа</a> ·
+<a href="#ru-signInSSO-signin">Вход SSO</a> · <a href="#ru-signInPassword-signin">Пароль</a> ·
+<a href="#ru-signInCode-signin">Одноразовый код</a> · <a href="#ru-about-about">О приложении</a></p>
+<p>Однострочные поля для названия, адреса, пользователя и порта. Многострочный ввод — только для списка подсетей.
+Иконки <a href="https://lucide.dev/license">Lucide (ISC / MIT)</a>. Синий акцент для навигации и действий;
+зелёный, оранжевый и красный — для состояния соединения.</p>
 <p>Отдельное нативное демоприложение, окно 680 × 620. Постоянная навигация слева, профиль сверху, сохранение снизу.
 «Дополнительно» — отдельный раздел. При открытии выбирается активный профиль, затем последний выбранный, затем первый доступный.</p>
-<p>В нижней панели Demo переключаются 11 сценариев, язык и оформление. Кнопка со стрелкой открывает настройки заново и проверяет выбор профиля.
+<p>В нижней панели Demo переключаются 20 сценариев, язык и оформление. Кнопка со стрелкой открывает настройки заново и проверяет выбор профиля.
+Вход проверяется от начала до конца: пароль <code>demo</code>, код <code>123456</code>.
 Все подключения, пароли и параметры — тестовые. Приложение не обращается к рабочему VPN.</p>
 <p>Сняты настоящие окна на встроенном экране без фокуса и перехвата мыши. Нативные контролы неактивны: эти кадры проверяют компоновку, а не активные цвета.</p>
 <div class="grid">''' + ''.join(cards) + '</div></html>')
+    (destination / 'v02.html').write_text((destination / 'index.html').read_text())
 
 
 if __name__ == '__main__':
