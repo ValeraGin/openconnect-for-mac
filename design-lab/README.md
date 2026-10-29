@@ -94,6 +94,7 @@ check is transient, so it does not leave the profile dirty or block sign-in.
 ```sh
 python3 design-lab/review.py --capture-passive
 python3 design-lab/review.py --capture-passive --only ru-idle-connection
+python3 design-lab/review.py --capture-passive --missing
 ```
 
 Review explicitly requires a non-mirrored built-in screen. The diagnostic panel

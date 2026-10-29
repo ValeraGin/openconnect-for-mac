@@ -15,6 +15,7 @@ APP = ROOT / '.local/design-lab/OpenConnect for Mac — Demo.app'
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--capture-passive', action='store_true', required=True)
+    parser.add_argument('--missing', action='store_true', help='Capture only missing or outdated images')
     parser.add_argument('--only', action='append', help='Case name; repeat to review several')
     parser.add_argument('--gallery-only', action='store_true', help='Rebuild the gallery from existing matching captures')
     args = parser.parse_args()
@@ -53,7 +54,8 @@ def main():
     for name, language, scenario, page, appearance in cases:
         png = destination / f'{name}.png'
         metadata = png.with_suffix('.json')
-        if not args.gallery_only and (not args.only or name in args.only):
+        already_current = png.exists() and metadata.exists() and json.loads(metadata.read_text()).get('binarySHA256') == binary_hash
+        if not args.gallery_only and (not args.only or name in args.only) and not (args.missing and already_current):
             ready = png.with_suffix('.ready.json')
             done = png.with_suffix('.capture-done')
             for path in [ready, done, png, metadata]:
@@ -71,7 +73,8 @@ def main():
                 command += ['--licenses']
             if scenario == 'error':
                 command += ['--details']
-            process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            errors = png.with_suffix('.stderr').open('w')
+            process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=errors)
             try:
                 deadline = time.monotonic() + 20
                 while not ready.exists() and time.monotonic() < deadline and process.poll() is None:
@@ -81,7 +84,9 @@ def main():
                 window_id = json.loads(ready.read_text())['windowID']
                 subprocess.run(['/usr/sbin/screencapture', '-x', '-o', '-l', str(window_id), str(png)], check=True)
                 done.write_text('ok')
-                process.wait(timeout=20)
+                status = process.wait(timeout=20)
+                if status != 0 or not metadata.exists():
+                    raise RuntimeError(f'{name}: capture exited {status}; see {png.with_suffix(".stderr")}')
                 report = json.loads(metadata.read_text())
                 assert report['focusPreserved'] and report['builtInDisplay'] and not report['active']
                 report['binarySHA256'] = binary_hash
@@ -94,6 +99,7 @@ def main():
                         process.wait(timeout=20)
                     except subprocess.TimeoutExpired:
                         process.terminate()
+                errors.close()
         if png.exists() and metadata.exists():
             report = json.loads(metadata.read_text())
             if report.get('binarySHA256') != binary_hash:
