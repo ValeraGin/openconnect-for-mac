@@ -23,6 +23,7 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         testCancelledSwitchPreservesActiveConnection()
         testCredentialEditorChangesOnlyItsOwnDraft()
         testSingleLineValuesDoNotAcceptNewlines()
+        testAddressFallbackAndTOTPSetup()
         print("\(checks - failures) passed; \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -90,7 +91,7 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         model.continueSSO()
         model.authPassword = "demo"
         model.submitPassword()
-        model.authCode = "123456"
+        model.authCode = "287082"
         model.submitCode()
         checkEqual(model.activeID, "home")
         model.select("work")
@@ -126,12 +127,12 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         check(model.authError)
         checkNil(model.activeID)
         model.authStage = .expired
-        model.authCode = "123456"
+        model.authCode = "287082"
         model.submitCode()
         checkNil(model.activeID)
         model.restartCode()
         checkEqual(model.authCode, "")
-        model.authCode = "123456"
+        model.authCode = "287082"
         model.select("home")
         model.submitCode()
         checkEqual(model.activeID, "work")
@@ -167,20 +168,66 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         model.authPassword = "demo"
         model.saveCredential()
         check(model.draft!.passwordSaved)
-        check(model.dirty)
+        checkFalse(model.dirty)
         checkEqual(model.authPassword, "")
-        checkFalse(model.profiles[1].passwordSaved)
+        check(model.profiles[1].passwordSaved)
         model.select("work")
         model.openCredential(.credentialCode)
         model.select("home")
-        model.authCode = "123456"
+        model.authCode = "287082"
         model.saveCredential()
         checkFalse(model.draft!.codeSaved)
         checkFalse(model.authPresented)
     }
     static func testSingleLineValuesDoNotAcceptNewlines() {
+        checkEqual(DemoModel.singleCode("123456"), "123456")
+        checkEqual(DemoModel.singleCode("7890 12a3"), "789012")
         checkEqual(DemoModel.singleLine("https://vpn.\nexample.com"), "https://vpn.example.com")
         checkEqual(DemoModel.singleLine("long\r\nname\u{2028}end"), "longnameend")
         checkEqual(DemoModel.singleLine(String(repeating: "a", count: 200)), String(repeating: "a", count: 200))
     }
+    static func testAddressFallbackAndTOTPSetup() {
+        let model = DemoModel()
+        model.load(.addressOnly)
+        checkEqual(model.draft?.displayName, "vpn.example.com")
+        check(model.valid)
+        let id = model.selectedID
+        model.draft?.server = "vpn.example.com/team"
+        check(model.valid)
+        checkEqual(model.draft?.displayName, "vpn.example.com/team")
+        checkEqual(model.selectedID, id)
+        model.draft?.name = "Custom"
+        checkEqual(model.draft?.displayName, "Custom")
+        model.load(.signInCode)
+        model.authCode = DemoModel.sampleCode
+        model.submitCode()
+        checkEqual(model.authStage, .rememberCode)
+        checkFalse(model.profiles[0].codeSaved)
+        model.configureTOTPAfterSignIn()
+        model.authSecret = DemoModel.sampleCode
+        model.saveCredential()
+        check(model.authError)
+        checkFalse(model.profiles[0].codeSaved)
+        model.authSecret = DemoModel.sampleSecret
+        model.saveCredential()
+        check(model.profiles[0].codeSaved)
+        checkEqual(model.authStage, .success)
+        checkEqual(model.authSecret, "")
+        model.load(.smsCode)
+        checkFalse(model.canOfferTOTP)
+        model.authCode = DemoModel.sampleCode
+        model.submitCode()
+        checkEqual(model.authStage, .success)
+        checkFalse(model.profiles[0].codeSaved)
+        model.load(.totpSetup)
+        model.authSecret = "otpauth://hotp/test?secret=" + DemoModel.sampleSecret
+        checkFalse(model.secretMatchesRecordedCode())
+        model.authSecret = "otpauth://totp/test?secret=" + DemoModel.sampleSecret
+        check(model.secretMatchesRecordedCode())
+        model.recordedCode = "000000"
+        checkFalse(model.secretMatchesRecordedCode())
+        model.openCredential(.credentialCode)
+        checkEqual(model.recordedCode, "")
+    }
+
 }

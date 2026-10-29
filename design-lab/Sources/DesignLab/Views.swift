@@ -99,13 +99,13 @@ struct LabView: View {
                 Picker(text("Профиль", "Profile"), selection: Binding(
                     get: { model.selectedID ?? "" }, set: { model.requestSelection($0) })) {
                         ForEach(model.profiles) { profile in
-                            Text((profile.name.isEmpty ? text("Без названия", "Untitled") : profile.name)
+                            Text(profile.displayName
                                  + (model.activeID == profile.id ? text(" • подключён", " • connected") : ""))
                                 .tag(profile.id)
                         }
                     }
                     .labelsHidden().accessibilityLabel(text("Профиль", "Profile"))
-                    .frame(maxWidth: .infinity).help(model.draft?.name ?? "")
+                    .frame(maxWidth: .infinity).help(model.draft?.displayName ?? "")
             }
             Button { model.add() } label: { Lucide(name: "plus", size: 16) }
                 .disabled(model.dirty)
@@ -164,7 +164,7 @@ struct LabView: View {
                         .disabled(model.dirty || !model.valid)
                 }.padding(.vertical, 5)
                 if model.scenario == .proxyWarning && model.activeID == model.selectedID {
-                    IconLabel(title: text("Системный SOCKS не включён. Порт 1080 занят.", "System SOCKS is off. Port 1080 is already in use."), icon: "triangle-alert")
+                    IconLabel(title: text("Системный SOCKS не включён. Порт 11080 занят.", "System SOCKS is off. Port 11080 is already in use."), icon: "triangle-alert")
                         .foregroundStyle(LabColor.warning)
                         .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
                     Button(text("Открыть настройки сети", "Open network settings")) { model.page = .network }
@@ -178,7 +178,6 @@ struct LabView: View {
                 }
             }
             Section(text("Параметры профиля", "Profile details")) {
-                profileField(text("Название", "Name"), key: \.name)
                 profileField(text("Адрес VPN", "VPN address"), key: \.server)
                 profileField(text("Пользователь", "Username"), key: \.user)
             }
@@ -245,7 +244,7 @@ struct LabView: View {
             Section {
                 Picker(text("Способ входа", "Sign-in method"), selection: field(\.browserLogin, fallback: true)) {
                     Text(text("В браузере (SSO)", "Browser (SSO)")).tag(true)
-                    Text(text("Пароль", "Password")).tag(false)
+                    Text(text("Пароль и SMS", "Password and SMS")).tag(false)
                 }
                 Text(model.draft?.browserLogin == true
                      ? text("При подключении откроется страница входа организации.", "Your organization’s sign-in page opens when connecting.")
@@ -262,12 +261,17 @@ struct LabView: View {
                 }
                 Text(model.dirty
                      ? text("Сначала сохраните изменения профиля.", "Save profile changes first.")
-                     : text("Вход → одноразовый код → подключение. Пароль demo, код 123456.", "Sign-in → one-time code → connection. Password demo, code 123456."))
+                     : text("Вход → одноразовый код → подключение. Пароль demo, код 287082.", "Sign-in → one-time code → connection. Password demo, code 287082."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
             Section(text("Сохранённые данные", "Saved credentials")) {
                 credential(text("Пароль", "Password"), key: \.passwordSaved, stage: .credentialPassword)
-                credential(text("Одноразовый код", "One-time code"), key: \.codeSaved, stage: .credentialCode)
+                if model.draft?.browserLogin == true {
+                    credential(text("TOTP", "TOTP"), key: \.codeSaved, stage: .credentialCode)
+                } else {
+                    Text(text("Код из SMS вводится при каждом входе. Сохранить его для будущих входов нельзя.", "Enter the SMS code each time. It cannot be saved for future sign-ins."))
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                }
             }
             Text(text("Изменение пароля и кода открывается в отдельном окне. Используйте только тестовые данные.", "Passwords and codes are edited in a separate window. Use sample data only."))
                 .font(.system(size: 12)).foregroundStyle(.secondary)
@@ -280,7 +284,7 @@ struct LabView: View {
                     .foregroundStyle(model.draft?[keyPath: key] == true ? LabColor.success : .secondary)
                 Button(model.draft?[keyPath: key] == true ? text("Изменить…", "Edit…") : text("Добавить…", "Add…")) {
                     model.openCredential(stage)
-                }
+                }.disabled(model.dirty || !model.valid)
             }
         }
     }
@@ -288,7 +292,7 @@ struct LabView: View {
         Group {
             Section {
                 Picker(text("Через VPN", "Use VPN for"), selection: field(\.route, fallback: .selected)) {
-                    Text(text("Весь трафик", "All traffic")).tag(RouteMode.all)
+                    Text(text("Весь IPv4-трафик", "All IPv4 traffic")).tag(RouteMode.all)
                     Text(text("Выбранные сети", "Selected networks")).tag(RouteMode.selected)
                     Text(text("Только SOCKS-прокси", "SOCKS proxy only")).tag(RouteMode.proxy)
                 }.pickerStyle(.radioGroup)
@@ -308,19 +312,22 @@ struct LabView: View {
                 Text(text("VPN доступен приложениям, настроенным на этот прокси.", "VPN is available to apps configured to use this proxy."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             } else {
-                Text(text("Весь интернет-трафик будет направлен через VPN.", "All internet traffic will be routed through the VPN."))
+                Text(text("Весь IPv4-трафик идёт через туннель (0.0.0.0/1 и 128.0.0.0/1).", "All IPv4 traffic uses the tunnel (0.0.0.0/1 and 128.0.0.0/1)."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
         }
     }
     private var advanced: some View {
         Group {
-            Section(text("Поведение соединения", "Connection behavior")) {
-                Toggle(text("Восстанавливать при обрыве", "Reconnect if interrupted"), isOn: field(\.reconnect, fallback: true)).tint(LabColor.accent)
+            Section(text("Профиль", "Profile")) {
+                profileField(text("Своё имя", "Custom name"), key: \.name)
+                Text(text("Необязательно. Без имени используется адрес VPN.", "Optional. The VPN address is used when this is blank."))
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
             }
-            Section(text("Сертификат", "Certificate")) {
-                profileField(text("Отпечаток", "Fingerprint"), key: \.certificate)
-                Text(text("Оставьте пустым, если администратор не выдал отпечаток сертификата.", "Leave blank unless your administrator provided a certificate fingerprint."))
+            Section(text("Совместимость", "Compatibility")) {
+                profileField(text("Прокси входа", "Upstream proxy"), key: \.upstreamProxy)
+                profileField("User-Agent", key: \.userAgent)
+                Text(text("Прокси: HTTP CONNECT или SOCKS5 без пароля. Пусто — прямое подключение.", "Proxy: HTTP CONNECT or SOCKS5 without authentication. Blank means a direct connection."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
         }
@@ -333,11 +340,19 @@ struct LabView: View {
                     Text("Русский").tag(Language.ru)
                     Text("English").tag(Language.en)
                 }
-                Picker(text("Оформление", "Appearance"), selection: $model.appearance) {
-                    Text(text("Как в системе", "System")).tag("system")
-                    Text(text("Светлое", "Light")).tag("light")
-                    Text(text("Тёмное", "Dark")).tag("dark")
+
+            }
+            Section(text("Автоподключение", "Automatic connection")) {
+                Picker(text("Поведение", "Policy"), selection: $model.autoPolicy) {
+                    Text(text("Вручную", "Manual")).tag("manual")
+                    Text(text("Восстанавливать прошлое", "Resume previous")).tag("resume")
+                    ForEach(model.profiles.filter { $0.browserLogin }) { profile in
+                        Text(text("Всегда: ", "Always: ") + profile.displayName).tag("always " + profile.id)
+                    }
                 }
+                Toggle(text("Не подключаться в этой сети", "Don’t connect on this network"), isOn: $model.skipNetwork)
+                Text(text("Профили с паролем и SMS требуют ручного входа.", "Password + SMS profiles require manual sign-in."))
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
             }
             Text(text("В демо настройки не меняют автозапуск и рабочее приложение.", "Demo settings do not change system login items or the installed VPN app."))
                 .font(.system(size: 12)).foregroundStyle(.secondary)
@@ -361,12 +376,10 @@ struct LabView: View {
         }.padding(.horizontal, 22).padding(.bottom, 16)
     }
     private var validationMessage: String {
-        if model.draft?.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == true {
-            return text("Укажите название профиля.", "Enter a profile name.")
-        }
-        let url = URL(string: model.draft?.server ?? "")
+        let raw = model.draft?.server ?? ""
+        let url = URL(string: raw.contains("://") ? raw : "https://" + raw)
         if url?.scheme != "https" || url?.host?.isEmpty != false {
-            return text("Укажите полный адрес VPN, начиная с https://.", "Enter the full VPN address, starting with https://.")
+            return text("Укажите адрес VPN, например vpn.example.com/group.", "Enter a VPN address, such as vpn.example.com/group.")
         }
         return text("В разделе «Сеть» укажите порт от 1 до 65535.", "In Network, enter a port from 1 to 65535.")
     }

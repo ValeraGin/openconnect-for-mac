@@ -23,9 +23,9 @@ enum PassiveCapture {
         let surface = LabScreen(rawValue: argument("--screen") ?? "settings") ?? .settings
         let panel = Panel(contentRect: NSRect(origin: .zero, size: surface.size),
                           styleMask: [.titled, .closable, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.title = surface == .settings ? "OpenConnect — Design Lab" : surface == .signin
-            ? model.t("Вход — OpenConnect Demo", "Sign-in — OpenConnect Demo")
-            : model.t("О приложении — OpenConnect", "About — OpenConnect")
+        panel.title = surface == .settings ? "OpenConnect for Mac — Demo" : surface == .signin
+            ? model.t("Вход — OpenConnect for Mac — Demo", "Sign-in — OpenConnect for Mac — Demo")
+            : model.t("О приложении — OpenConnect for Mac", "About — OpenConnect for Mac")
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false
         panel.isFloatingPanel = false

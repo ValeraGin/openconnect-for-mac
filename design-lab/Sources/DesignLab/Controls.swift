@@ -71,3 +71,13 @@ enum LabColor {
     static let warning = Color(nsColor: .systemOrange)
     static let failure = Color(nsColor: .systemRed)
 }
+
+/// Reuse the production brand asset without redrawing or recoloring it.
+struct BrandMark: View {
+    var size: CGFloat = 32
+    var body: some View {
+        Image(nsImage: NSImage(contentsOf: Bundle.main.resourceURL!.appendingPathComponent("mark.svg"))!)
+            .resizable().aspectRatio(contentMode: .fit).frame(width: size, height: size)
+            .accessibilityHidden(true)
+    }
+}

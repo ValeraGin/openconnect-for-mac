@@ -20,13 +20,10 @@ struct AboutView: View {
                         .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {
-                Lucide(name: "shield", size: 40).foregroundStyle(.white)
-                    .frame(width: 76, height: 76)
-                    .background(LinearGradient(colors: [Color.blue, Color.indigo], startPoint: .topLeading,
-                                               endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 19))
+                BrandMark(size: 76)
                 VStack(spacing: 5) {
-                    Text("OpenConnect").font(.system(size: 25, weight: .semibold))
-                    Text("Design Lab 0.2").font(.system(size: 13)).foregroundStyle(.secondary)
+                    Text("OpenConnect for Mac").font(.system(size: 25, weight: .semibold))
+                    Text(t("Демо интерфейса 0.3", "Interface demo 0.3")).font(.system(size: 13)).foregroundStyle(.secondary)
                 }
                 Text(t("Простой VPN-клиент для macOS.\nПрототип нового интерфейса.",
                        "A simple VPN client for macOS.\nA prototype of the new interface."))

@@ -50,7 +50,7 @@ final class LabDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         installMenus()
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 620),
                               styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
-        window.title = "OpenConnect — Design Lab"
+        window.title = "OpenConnect for Mac — Demo"
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: AppearanceView(model: model))
         window.center()
@@ -84,8 +84,8 @@ final class LabDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             target?.contentView = NSHostingView(rootView: AppearanceView(model: model, screen: screen))
             if screen == .signin { signInWindow = target } else { aboutWindow = target }
         }
-        target?.title = screen == .signin ? model.t("Вход — OpenConnect Demo", "Sign-in — OpenConnect Demo")
-            : model.t("О приложении — OpenConnect", "About — OpenConnect")
+        target?.title = screen == .signin ? model.t("Вход — OpenConnect for Mac — Demo", "Sign-in — OpenConnect for Mac — Demo")
+            : model.t("О приложении — OpenConnect for Mac", "About — OpenConnect for Mac")
         if let display = window?.screen, let target {
             target.setFrameTopLeftPoint(NSPoint(x: display.visibleFrame.midX - target.frame.width / 2,
                                                y: display.visibleFrame.midY + target.frame.height / 2))
@@ -100,12 +100,12 @@ final class LabDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func openAbout() { model.aboutPresented = true }
     private func installMenus() {
         let menu = NSMenu()
-        let appMenu = NSMenu(title: "Design Lab")
-        let about = appMenu.addItem(withTitle: model.t("О приложении OpenConnect", "About OpenConnect"),
+        let appMenu = NSMenu(title: "OpenConnect for Mac")
+        let about = appMenu.addItem(withTitle: model.t("О приложении OpenConnect for Mac", "About OpenConnect for Mac"),
                                    action: #selector(openAbout), keyEquivalent: "")
         about.target = self
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: model.t("Завершить Design Lab", "Quit Design Lab"),
+        appMenu.addItem(withTitle: model.t("Завершить OpenConnect for Mac", "Quit OpenConnect for Mac"),
                         action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         let appItem = NSMenuItem(); appItem.submenu = appMenu; menu.addItem(appItem)
         let edit = NSMenu(title: model.t("Правка", "Edit"))

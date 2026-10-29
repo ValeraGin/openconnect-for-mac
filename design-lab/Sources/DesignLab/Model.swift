@@ -17,7 +17,7 @@ enum Page: String, CaseIterable {
 enum Scenario: String, CaseIterable {
     case idle, connected, connecting, error, empty, single, many, long, missing, unsaved, proxyWarning
     case signInSSO, signInPassword, signInCode, signInRejected, signInExpired, signInSuccess
-    case credentialPassword, credentialCode, about
+    case credentialPassword, credentialCode, about, addressOnly, totpOffer, totpSetup, smsCode
 }
 enum LinkState { case idle, connecting, signIn, connected, failed }
 enum RouteMode: String, CaseIterable { case all, selected, proxy }
@@ -32,10 +32,20 @@ struct DemoProfile: Identifiable, Equatable {
     var route: RouteMode = .selected
     var routes = "10.20.0.0/16\n192.168.50.0/24"
     var dns = "corp.example"
-    var port = "1080"
+    var port = "11080"
     var systemProxy = false
-    var reconnect = true
-    var certificate = ""
+    var upstreamProxy = ""
+    var userAgent = ""
+    var displayName: String {
+        let custom = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !custom.isEmpty { return custom }
+        let address = server.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = address.contains("://") ? address : "https://" + address
+        if let components = URLComponents(string: value), let host = components.host {
+            return host + (components.port.map { ":\($0)" } ?? "") + components.path
+        }
+        return address.isEmpty ? "—" : address
+    }
 }
 
 /// Entirely synthetic state. No production imports, CLI, keychain or network.
@@ -64,6 +74,11 @@ final class DemoModel: ObservableObject {
     @Published var authPassword = ""
     @Published var authCode = ""
     @Published var authError = false
+    @Published var authSecret = ""
+    @Published var totpAfterLogin = false
+    @Published var recordedCode = ""
+    @Published var autoPolicy = "resume"
+    @Published var skipNetwork = false
     @Published var aboutLicenses = false
     private let preferences: UserDefaults?
     private var lastSelected: String?
@@ -104,8 +119,12 @@ final class DemoModel: ObservableObject {
         case .signInExpired: return t("Вход: код истёк", "Sign-in: expired")
         case .signInSuccess: return t("Вход: успех", "Sign-in: success")
         case .credentialPassword: return t("Настройка пароля", "Save password")
-        case .credentialCode: return t("Настройка кода", "Save one-time code")
+        case .credentialCode: return t("Секрет TOTP", "TOTP secret")
         case .about: return t("О приложении", "About")
+        case .addressOnly: return t("Профиль без имени", "Address as profile name")
+        case .totpOffer: return t("Предложить TOTP", "Offer TOTP setup")
+        case .totpSetup: return t("Настройка TOTP", "TOTP setup")
+        case .smsCode: return t("Код из SMS", "SMS code")
         }
     }
     var dirty: Bool {
@@ -117,9 +136,9 @@ final class DemoModel: ObservableObject {
     }
     var valid: Bool {
         guard let draft else { return false }
-        let url = URL(string: draft.server)
-        return !draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && url?.scheme == "https" && !(url?.host?.isEmpty ?? true)
+        let url = URL(string: draft.server.contains("://") ? draft.server : "https://" + draft.server)
+        return !draft.server.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !draft.server.contains(" ") && url?.scheme == "https" && !(url?.host?.isEmpty ?? true)
             && (draft.route != .proxy || Int(draft.port).map { (1...65535).contains($0) } == true)
     }
     static func initialSelection(ids: [String], active: String?, last: String?) -> String? {
@@ -160,7 +179,7 @@ final class DemoModel: ObservableObject {
     }
     func add() {
         let id = UUID().uuidString
-        let profile = DemoProfile(id: id, name: t("Новый профиль", "New profile"), server: "", user: "")
+        let profile = DemoProfile(id: id, name: "", server: "", user: "")
         profiles.append(profile)
         select(id)
         page = .connection
@@ -180,7 +199,7 @@ final class DemoModel: ObservableObject {
     func load(_ scenario: Scenario) {
         self.scenario = scenario
         authPresented = false; aboutPresented = false; aboutLicenses = false
-        authPassword = ""; authCode = ""; authError = false
+        authPassword = ""; authCode = ""; authSecret = ""; recordedCode = ""; authError = false; totpAfterLogin = false
         profiles = [
             DemoProfile(id: "work", name: t("Работа", "Work"), server: "https://vpn.example.com", user: "alex", passwordSaved: true, codeSaved: true),
             DemoProfile(id: "home", name: t("Дом", "Home"), server: "https://home.example.com", user: "alex", route: .all),
@@ -197,7 +216,10 @@ final class DemoModel: ObservableObject {
             profiles[0].server = "https://remote-access.engineering.staging.example.com/group/international"
             profiles[0].user = "alex.engineering.international@example.com"
         }
-        if scenario == .missing { profiles[0].name = ""; profiles[0].server = "vpn.example.com" }
+        if scenario == .missing { profiles[0].name = ""; profiles[0].server = "" }
+        if scenario == .addressOnly { profiles[0].name = "" }
+        if scenario == .smsCode { profiles[0].browserLogin = false; profiles[0].codeSaved = false }
+        if [.signInCode, .totpOffer, .totpSetup].contains(scenario) { profiles[0].codeSaved = false }
         if scenario == .connected || scenario == .proxyWarning { activeID = "work"; link = .connected }
         if scenario == .proxyWarning { profiles[0].route = .proxy; profiles[0].systemProxy = true }
         if scenario == .connecting { link = .connecting }
