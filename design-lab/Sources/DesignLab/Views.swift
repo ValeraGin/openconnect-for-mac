@@ -377,7 +377,7 @@ struct LabView: View {
             Section(text("Параметры", "Options")) {
                 optionField(text("Описание", "Description"), key: \.description)
                 optionField(text("Доступ", "Access check"), key: \.health)
-                Toggle(text("Уведомления этого профиля", "Profile notifications"), isOn: Binding(get: { model.draft?.options.notifications ?? true }, set: { model.draft?.options.notifications = $0 }))
+                Toggle(text("Уведомления этого профиля", "Profile notifications"), isOn: Binding(get: { model.draft?.options.notifications ?? true }, set: { model.draft?.options.notifications = $0 })).tint(LabColor.accent)
             }
             Section(text("Совместимость", "Compatibility")) {
                 profileField(text("Прокси входа", "Upstream proxy"), key: \.upstreamProxy)
@@ -422,14 +422,14 @@ struct LabView: View {
                         Text(text("Всегда: ", "Always: ") + profile.displayName).tag("always " + profile.id)
                     }
                 }
-                Toggle(text("Не подключаться в этой сети", "Don’t connect on this network"), isOn: $model.skipNetwork)
+                Toggle(text("Не подключаться в этой сети", "Don’t connect on this network"), isOn: $model.skipNetwork).tint(LabColor.accent)
                 Text(text("Профили с паролем и SMS требуют ручного входа.", "Password + SMS profiles require manual sign-in."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
             Section {
                 DetailLink(model: model, destination: .setup)
                 DetailLink(model: model, destination: .profiles)
-                Toggle(text("Режим разработчика", "Developer mode"), isOn: $model.developer)
+                Toggle(text("Режим разработчика", "Developer mode"), isOn: $model.developer).tint(LabColor.accent)
                 if model.developer {
                     Button(text("Сбросить тестовый вход", "Reset sample sign-in")) { model.activeID = nil; model.pausedID = nil; model.link = .idle }
                 }

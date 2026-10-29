@@ -133,7 +133,6 @@ struct AppearanceView: View {
             case .about: AboutView(model: model)
             }
         }
-            .tint(LabColor.accent)
             .preferredColorScheme(model.appearance == "light" ? .light : model.appearance == "dark" ? .dark : nil)
             .environment(\.locale, Locale(identifier: model.language.rawValue))
     }

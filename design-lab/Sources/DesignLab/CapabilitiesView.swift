@@ -199,7 +199,7 @@ struct CapabilitiesView: View {
     private func learningField(_ key: String, _ title: String) -> some View {
         Toggle(title, isOn: Binding(get: { model.learningSelections.contains(key) }, set: {
             if $0 { model.learningSelections.insert(key) } else { model.learningSelections.remove(key) }
-        }))
+        })).tint(LabColor.accent)
     }
     private var compatibility: some View {
         Group {
@@ -252,7 +252,7 @@ struct CapabilitiesView: View {
                 Text("branch.example.com.ocmac").font(.system(size: 13, weight: .medium))
                 Text("https://branch.example.com").font(.system(size: 12)).foregroundStyle(.secondary)
                 note("В файле есть команды или скрипты. Подключайтесь, только если доверяете отправителю.", "This file contains commands or scripts. Connect only if you trust the sender.")
-                Toggle(t("Доверяю источнику тестового файла", "I trust the sample file’s source"), isOn: $model.importTrusted)
+                Toggle(t("Доверяю источнику тестового файла", "I trust the sample file’s source"), isOn: $model.importTrusted).tint(LabColor.accent)
                 Button(t("Импортировать тестовый профиль", "Import sample profile")) { model.importSample() }.disabled(!model.importTrusted || model.dirty)
                 note("Тестовый предпросмотр импорта .ocmac. Рабочий клиент также открывает файл двойным щелчком в Finder.", "Sample .ocmac import preview. Production also opens profiles from Finder.")
             }
@@ -307,9 +307,9 @@ struct CapabilitiesView: View {
                 }
             }
             Section(t("Показывать", "Show notifications")) {
-                Toggle(t("Нужен вход", "Sign-in required"), isOn: $model.notifyLogin)
-                Toggle(t("Проблемы со связью и доступом", "Connection and access problems"), isOn: $model.notifyProblems)
-                Toggle(t("Восстановление соединения", "Connection restored"), isOn: $model.notifyEvents)
+                Toggle(t("Нужен вход", "Sign-in required"), isOn: $model.notifyLogin).tint(LabColor.accent)
+                Toggle(t("Проблемы со связью и доступом", "Connection and access problems"), isOn: $model.notifyProblems).tint(LabColor.accent)
+                Toggle(t("Восстановление соединения", "Connection restored"), isOn: $model.notifyEvents).tint(LabColor.accent)
                 note("Повтор одного события — не чаще раза в 10 минут. Стиль и звук задаются в macOS.", "Repeated events are limited to once per 10 minutes. macOS controls style and sound.")
             }
             Section {
@@ -349,7 +349,7 @@ struct CapabilitiesView: View {
                     Text(t("Приложение", "Application")).tag("app")
                 }
                 SingleLineInput(text: $model.logFilter, label: t("Поиск в журнале", "Search logs"), placeholder: t("Фильтр…", "Filter…")).frame(height: 26)
-                Toggle(t("Следить за новыми строками", "Follow new lines"), isOn: $model.followLog)
+                Toggle(t("Следить за новыми строками", "Follow new lines"), isOn: $model.followLog).tint(LabColor.accent)
             }
             Section {
                 Text(model.logLines.isEmpty ? t("Совпадений нет", "No matches") : model.logLines.joined(separator: "\n"))
@@ -371,12 +371,12 @@ struct CapabilitiesView: View {
                 }
                 Section(t("Сети в туннеле", "Tunnel routes")) {
                     ForEach(model.runtimeRoutes, id: \.self) { route in
-                        Toggle(route, isOn: runtimeBinding(route, routes: true)).disabled(model.pausedID == model.selectedID)
+                        Toggle(route, isOn: runtimeBinding(route, routes: true)).disabled(model.pausedID == model.selectedID).tint(LabColor.accent)
                     }
                 }
                 Section(t("DNS-зоны", "DNS zones")) {
                     ForEach(model.draft?.zones ?? []) { zone in
-                        Toggle("\(zone.zone) → \(zone.resolver)", isOn: runtimeBinding(zone.zone, routes: false)).disabled(model.pausedID == model.selectedID)
+                        Toggle("\(zone.zone) → \(zone.resolver)", isOn: runtimeBinding(zone.zone, routes: false)).disabled(model.pausedID == model.selectedID).tint(LabColor.accent)
                     }
                 }
                 note("Переключатели меняют текущую сессию. Сохранённый профиль остаётся прежним.", "These switches affect the current session. The saved profile stays unchanged.")
