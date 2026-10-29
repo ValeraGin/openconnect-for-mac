@@ -98,11 +98,14 @@ python3 design-lab/review.py --capture-passive --missing
 ```
 
 Review explicitly requires a non-mirrored built-in screen. The diagnostic panel
-cannot become key/main or receive mouse input. The runner launches the bundle executable directly in accessory mode and
+cannot become key/main or receive mouse input. The runner uses `open -g -n -W` in accessory mode and
 captures the native window with `screencapture`; JSON sidecars validate focus and
 display before accepting images. No external-screen fallback or active capture.
 Native controls are inactive; do not use these frames to approve active colors.
 The versioned gallery is `.local/design-lab/review/v04.html` (also `index.html`).
+Locked/asleep sessions stop before launching a capture window. `--missing` resumes
+without reshooting accepted frames; `--gallery-only` works while locked. The gallery
+shows accepted/expected counts so an incomplete run cannot appear complete.
 Long forms also have `-bottom` captures; the capture host scrolls only its own passive
 window. Metadata records the selected detail and scroll request. Normal interactive launch is
 only for the user to open when ready; automated review never activates it.
