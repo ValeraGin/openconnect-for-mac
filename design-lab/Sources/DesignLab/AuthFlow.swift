@@ -9,11 +9,16 @@ extension DemoModel {
     static let sampleSecret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
     static let sampleTime = Date(timeIntervalSince1970: 59)
     static var sampleCode: String { TOTP.code(secretBase32: sampleSecret, at: sampleTime)! }
+    var expectedCode: String {
+        guard let o = authProfile?.options, !smsSignIn else { return Self.sampleCode }
+        return TOTP.code(secretBase32: Self.sampleSecret, at: Self.sampleTime,
+                         params: TOTPParams(algorithm: o.algorithm, digits: Int(o.digits) ?? 6, period: Int(o.period) ?? 30)) ?? Self.sampleCode
+    }
     var smsSignIn: Bool { authProfile?.browserLogin == false }
-    var canOfferTOTP: Bool { !smsSignIn && authProfile?.codeSaved == false }
+    var canOfferTOTP: Bool { !smsSignIn && authProfile?.codeSaved == false && ["auto", "keychain"].contains(authProfile?.options.codeSource ?? "auto") }
     func secretMatchesRecordedCode() -> Bool {
         let raw = authSecret.trimmingCharacters(in: .whitespacesAndNewlines)
-        let code = recordedCode.isEmpty ? Self.sampleCode : recordedCode
+        let code = recordedCode.isEmpty ? expectedCode : recordedCode
         func matches(_ secret: String, _ params: TOTPParams) -> Bool {
             guard params.isSupported, params.digits == code.count else { return false }
             return (-1...1).contains { offset in
@@ -42,12 +47,12 @@ extension DemoModel {
     static func singleLine(_ value: String) -> String {
         value.components(separatedBy: .newlines).joined(separator: "")
     }
-    static func singleCode(_ value: String) -> String {
-        String(value.filter { "0123456789".contains($0) }.prefix(6))
+    static func singleCode(_ value: String, digits: Int = 6) -> String {
+        String(value.filter { "0123456789".contains($0) }.prefix(digits))
     }
     var authProfile: DemoProfile? { profiles.first { $0.id == authTargetID } }
     func beginSignIn() {
-        guard let id = selectedID, !dirty, valid else { showValidation = true; return }
+        guard let id = selectedID, canStartConnection else { showValidation = true; return }
         authTargetID = id
         recordedCode = ""
         authStage = draft?.browserLogin == true ? .sso : .password
@@ -76,10 +81,10 @@ extension DemoModel {
     }
     func submitCode() {
         guard authStage == .code else { return }
-        guard authCode == Self.sampleCode, let id = authTargetID, profiles.contains(where: { $0.id == id }) else {
+        guard authCode == expectedCode, let id = authTargetID, profiles.contains(where: { $0.id == id }) else {
             authError = true; return
         }
-        activeID = id; linkTarget = id; link = .connected
+        activeID = id; pausedID = nil; disabledRoutes = []; disabledZones = []; linkTarget = id; link = .connected
         recordedCode = authCode
         authPassword = ""; authCode = ""; authSecret = ""; authError = false; totpAfterLogin = false
         authStage = canOfferTOTP ? .rememberCode : .success
@@ -109,13 +114,13 @@ extension DemoModel {
         cancelSignIn()
     }
     func loadAuthFixture(_ scenario: Scenario) {
-        guard scenario.rawValue.hasPrefix("signIn") || scenario.rawValue.hasPrefix("credential") || [.totpOffer, .totpSetup, .smsCode].contains(scenario) else { return }
+        guard scenario.rawValue.hasPrefix("signIn") || scenario.rawValue.hasPrefix("credential") || [.totpOffer, .totpSetup, .smsCode, .totpEight].contains(scenario) else { return }
         authTargetID = selectedID; authUsername = "alex"; authError = false
         authPassword = ""; authCode = ""
         switch scenario {
         case .signInSSO: authStage = .sso
         case .signInPassword: authStage = .password
-        case .signInCode: authStage = .code
+        case .signInCode, .totpEight: authStage = .code
         case .signInRejected: authStage = .password; authPassword = "wrong"; authError = true
         case .signInExpired: authStage = .expired
         case .signInSuccess: authStage = .success; activeID = selectedID

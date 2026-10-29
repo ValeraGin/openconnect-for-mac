@@ -26,7 +26,7 @@ struct SignInView: View {
         case .password, .credentialPassword: return "lock-keyhole"
         case .code, .credentialCode, .rememberCode: return "key-round"
         case .expired: return "circle-alert"
-        case .success: return "shield-check"
+        case .success: return "circle-check"
         }
     }
     var body: some View {
@@ -98,8 +98,8 @@ struct SignInView: View {
                 Text(t("Код из приложения? После успешного входа можно настроить TOTP и не вводить его вручную.", "An authenticator code? After signing in, you can set up TOTP to fill it automatically."))
                     .font(.system(size: 12)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).padding(.bottom, 12)
             }
-            errorIfNeeded(t("Код не подошёл. Попробуйте 287082.", "That code didn’t work. Try 287082."))
-            primary(t("Подключиться", "Connect")) { model.submitCode() }.disabled(model.authCode.count != 6)
+            errorIfNeeded(t("Код не подошёл. Попробуйте \(model.expectedCode).", "That code didn’t work. Try \(model.expectedCode)."))
+            primary(t("Подключиться", "Connect")) { model.submitCode() }.disabled(model.authCode.count != model.expectedCode.count)
             demoHint
         case .expired:
             Text(t("Подтверждение не завершено. Начните вход заново.",
@@ -131,7 +131,7 @@ struct SignInView: View {
                 .textFieldStyle(.roundedBorder).padding(.bottom, 10)
             Button(t("Подставить тестовый секрет", "Use the sample secret")) { model.authSecret = DemoModel.sampleSecret; model.authError = false }
                 .buttonStyle(.link).padding(.bottom, 10)
-            Text(t("Демо проверяет код 287082 в фиксированный момент времени. Камера и чтение QR доступны в рабочем приложении.", "This demo checks code 287082 at a fixed time. Camera and QR capture are available in the production app."))
+            Text(t("Демо проверяет код \(model.expectedCode) в фиксированный момент времени. Камера и чтение QR доступны в рабочем приложении.", "This demo checks code \(model.expectedCode) at a fixed time. Camera and QR capture are available in the production app."))
                 .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).padding(.bottom, 12)
             errorIfNeeded(t("Секрет не соответствует введённому коду.", "The secret does not match the entered code."))
             credentialActions
@@ -151,8 +151,8 @@ struct SignInView: View {
         VStack(alignment: .leading, spacing: 5) {
             Text(t("Одноразовый код", "One-time code")).font(.system(size: 12, weight: .medium))
             SingleLineInput(text: Binding(get: { model.authCode }, set: {
-                model.authCode = DemoModel.singleCode($0)
-            }), label: t("Одноразовый код", "One-time code"), placeholder: "287082").frame(height: 28)
+                model.authCode = DemoModel.singleCode($0, digits: model.expectedCode.count)
+            }), label: t("Одноразовый код", "One-time code"), placeholder: model.expectedCode).frame(height: 28)
         }.padding(.bottom, 14)
     }
     private var credentialActions: some View {
@@ -165,7 +165,7 @@ struct SignInView: View {
         }
     }
     private var demoHint: some View {
-        Text(t("Демо: пароль demo · код 287082", "Demo: password demo · code 287082"))
+        Text(t("Демо: пароль demo · код \(model.expectedCode)", "Demo: password demo · code \(model.expectedCode)"))
             .font(.system(size: 11)).foregroundStyle(.secondary).padding(.top, 10)
     }
     @ViewBuilder private func errorIfNeeded(_ message: String) -> some View {

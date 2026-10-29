@@ -15,9 +15,14 @@ struct LabView: View {
                 sidebar
                 Divider()
                 VStack(spacing: 0) {
-                    if model.page != .general { profilePicker; Divider() }
+                    if !model.page.isGlobal { profilePicker; Divider() }
                     heading
-                    if model.page == .general { general }
+                    if model.detail != nil {
+                        CapabilitiesView(model: model)
+                        if !model.page.isGlobal { footer }
+                    }
+                    else if [.notifications, .diagnostics].contains(model.page) { CapabilitiesView(model: model) }
+                    else if model.page == .general { general }
                     else if model.draft == nil { empty }
                     else {
                         Form {
@@ -26,7 +31,7 @@ struct LabView: View {
                             case .login: login
                             case .network: network
                             case .advanced: advanced
-                            case .general: EmptyView()
+                            case .general, .notifications, .diagnostics: EmptyView()
                             }
                         }
                         .formStyle(.grouped)
@@ -48,6 +53,11 @@ struct LabView: View {
         } message: {
             Text(text("В текущем профиле есть несохранённые изменения.", "The current profile has unsaved changes."))
         }
+        .alert(text("Профиль изменён снаружи", "Profile changed outside the editor"), isPresented: $model.confirmOverwrite) {
+            Button(text("Перечитать", "Reload")) { model.resolveConflict(reload: true) }
+            Button(text("Перезаписать", "Overwrite"), role: .destructive) { model.resolveConflict(reload: false) }
+            Button(text("Отмена", "Cancel"), role: .cancel) { }
+        } message: { Text(text("Выберите, какие правки оставить. В рабочем приложении предыдущий файл сохраняется как .bak.", "Choose which edits to keep. Production preserves the previous file as .bak.")) }
         .alert(text("Сбросить демо?", "Reset demo?"), isPresented: $showReset) {
             Button(text("Сбросить", "Reset")) { model.load(model.scenario) }
             Button(text("Отмена", "Cancel"), role: .cancel) { }
@@ -59,9 +69,9 @@ struct LabView: View {
             Text(text("ПРОФИЛЬ", "PROFILE"))
                 .font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
                 .padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 8)
-            ForEach(Page.allCases.filter { $0 != .general }, id: \.self) { item in nav(item) }
+            ForEach(Page.allCases.filter { !$0.isGlobal }, id: \.self) { item in nav(item) }
             Divider().padding(.horizontal, 12).padding(.vertical, 14)
-            nav(.general)
+            ForEach(Page.allCases.filter { $0.isGlobal }, id: \.self) { item in nav(item) }
             Button { model.aboutPresented = true } label: {
                 IconLabel(title: text("О приложении", "About"), icon: "info")
                     .font(.system(size: 12)).frame(maxWidth: .infinity, alignment: .leading)
@@ -76,8 +86,11 @@ struct LabView: View {
         .background(Color(nsColor: .controlBackgroundColor))
     }
     private func nav(_ page: Page) -> some View {
-        Button { model.page = page } label: {
-            IconLabel(title: model.title(page), icon: page.icon)
+        Button { model.page = page; model.detail = nil; model.notice = "" } label: {
+            HStack(spacing: 8) {
+                if page == .connection { BrandMark(size: 18) } else { Lucide(name: page.icon) }
+                Text(model.title(page))
+            }
                 .font(.system(size: 12, weight: model.page == page ? .semibold : .regular))
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -107,7 +120,13 @@ struct LabView: View {
                     .labelsHidden().accessibilityLabel(text("Профиль", "Profile"))
                     .frame(maxWidth: .infinity).help(model.draft?.displayName ?? "")
             }
-            Button { model.add() } label: { Lucide(name: "plus", size: 16) }
+            Menu {
+                Button(text("Управление профилями…", "Manage profiles…")) { model.navigate(.profiles) }
+                Button(text("Импорт и экспорт…", "Import and export…")) { model.navigate(.transfer) }
+                Button(text("Предпросмотр файла…", "Preview file…")) { model.navigate(.filePreview) }.disabled(model.draft == nil)
+            } label: { Lucide(name: "ellipsis", size: 16) }.fixedSize()
+                .help(text("Действия с профилями", "Profile actions"))
+            Button { model.add(); model.detail = nil } label: { Lucide(name: "plus", size: 16) }
                 .disabled(model.dirty)
                 .help(text("Добавить профиль", "Add profile"))
                 .accessibilityLabel(text("Добавить профиль", "Add profile"))
@@ -116,8 +135,11 @@ struct LabView: View {
     }
     private var heading: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(model.title(model.page)).font(.system(size: 20, weight: .semibold))
-            Text(subtitle).font(.system(size: 12)).foregroundStyle(.secondary)
+            if model.detail != nil {
+                Button("← " + model.title(model.page)) { model.detail = nil; model.notice = "" }.buttonStyle(.link).padding(.bottom, 4)
+            }
+            Text(model.detail?.title(model.language) ?? model.title(model.page)).font(.system(size: 20, weight: .semibold))
+            Text(model.detail == nil ? subtitle : text("Параметры и действия · тестовые данные", "Options and actions · sample data")).font(.system(size: 12)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -130,15 +152,19 @@ struct LabView: View {
         case .network: return text("Какой трафик направлять через VPN.", "Choose which traffic uses the VPN.")
         case .advanced: return text("Необязательные параметры этого профиля.", "Optional settings for this profile.")
         case .general: return text("Настройки для всех профилей.", "Settings shared by all profiles.")
+        case .notifications: return text("Какие события показывать.", "Choose which events to show.")
+        case .diagnostics: return text("Проверка доступа и журналы.", "Access checks and logs.")
         }
     }
     private var empty: some View {
         VStack(spacing: 12) {
-            Lucide(name: "shield", size: 40).foregroundStyle(LabColor.accent)
+            Lucide(name: "folder-plus", size: 32).foregroundStyle(LabColor.accent)
+                .frame(width: 58, height: 58).background(LabColor.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
             Text(text("Добавьте первый профиль", "Add your first profile")).font(.headline)
             Text(text("Нужны адрес VPN и имя пользователя.", "You’ll need a VPN address and a username."))
                 .foregroundStyle(.secondary)
             Button(text("Добавить профиль", "Add profile")) { model.add() }
+            Button(text("Открыть профиль от коллеги…", "Open a shared profile…")) { model.navigate(.transfer) }.buttonStyle(.link)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -146,13 +172,10 @@ struct LabView: View {
         Group {
             Section {
                 HStack(alignment: .center, spacing: 12) {
-                    if model.selectedLink == .connecting {
-                        ProgressView().controlSize(.small).frame(width: 28)
-                    } else {
-                        Lucide(name: statusIcon, size: 24).foregroundStyle(statusColor)
-                            .frame(width: 40, height: 40)
-                            .background(statusColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
-                    }
+                    BrandMark(size: 40)
+                        .overlay(alignment: .bottomTrailing) {
+                            if model.selectedLink == .connecting { ProgressView().controlSize(.mini) }
+                        }
                     VStack(alignment: .leading, spacing: 4) {
                         Text(statusTitle).fontWeight(.semibold).foregroundStyle(statusColor)
                         Text(statusDetail).font(.system(size: 12)).foregroundStyle(.secondary)
@@ -161,8 +184,12 @@ struct LabView: View {
                     Spacer(minLength: 8)
                     Button(connectionAction) { model.toggleConnection() }
                         .buttonStyle(.borderedProminent).tint(LabColor.accent)
-                        .disabled(model.dirty || !model.valid)
+                        .disabled(model.activeID != model.selectedID && !model.canStartConnection)
                 }.padding(.vertical, 5)
+                if !model.helperReady && model.draft?.route != .proxy {
+                    Text(text("Для туннеля нужен системный помощник.", "Tunnel mode needs the system helper.")).font(.system(size: 12)).foregroundStyle(LabColor.warning)
+                    DetailLink(model: model, destination: .setup)
+                }
                 if model.scenario == .proxyWarning && model.activeID == model.selectedID {
                     IconLabel(title: text("Системный SOCKS не включён. Порт 11080 занят.", "System SOCKS is off. Port 11080 is already in use."), icon: "triangle-alert")
                         .foregroundStyle(LabColor.warning)
@@ -175,6 +202,14 @@ struct LabView: View {
                         Text(text("Сервер vpn.example.com не ответил за 30 секунд. Проверьте адрес и доступ к интернету, затем повторите подключение.\n\nTLS handshake timed out (ETIMEDOUT).", "vpn.example.com did not respond within 30 seconds. Check the address and your internet connection, then try again.\n\nTLS handshake timed out (ETIMEDOUT)."))
                             .font(.system(size: 12)).textSelection(.enabled)
                     }
+                }
+            }
+            if model.activeID == model.selectedID {
+                Section {
+                    if model.draft?.route != .proxy {
+                        Button(model.pausedID == model.selectedID ? text("Возобновить", "Resume") : text("Приостановить", "Pause")) { model.togglePause() }
+                    }
+                    DetailLink(model: model, destination: .runtime)
                 }
             }
             Section(text("Параметры профиля", "Profile details")) {
@@ -205,32 +240,33 @@ struct LabView: View {
         }
     }
     private var statusColor: Color {
+        if model.pausedID == model.selectedID && model.selectedID != nil { return LabColor.warning }
         if model.activeID == model.selectedID { return LabColor.success }
         if model.selectedLink == .failed { return LabColor.failure }
+        if !model.helperReady && model.draft?.route != .proxy { return LabColor.warning }
         if !model.valid { return LabColor.warning }
         if model.selectedLink == .connecting || model.selectedLink == .signIn { return LabColor.accent }
         return .secondary
     }
     private var statusTitle: String {
+        if model.pausedID == model.selectedID && model.selectedID != nil { return text("Приостановлено", "Paused") }
         if model.activeID == model.selectedID { return text("Подключено", "Connected") }
         if model.selectedLink == .connecting { return text("Подключаемся…", "Connecting…") }
         if model.selectedLink == .signIn { return text("Ожидается вход", "Sign-in required") }
         if model.selectedLink == .failed { return text("Не удалось подключиться", "Couldn’t connect") }
+        if !model.helperReady && model.draft?.route != .proxy { return text("Нужна настройка", "Setup required") }
         if !model.valid { return text("Заполните профиль", "Complete the profile") }
         return text("Не подключено", "Disconnected")
     }
     private var statusDetail: String {
+        if model.pausedID == model.selectedID && model.selectedID != nil { return text("Сети и DNS сняты, сессия жива", "Routes and DNS removed; session alive") }
         if model.activeID == model.selectedID { return text("Соединение установлено · 12 мин", "Connection established · 12 min") }
         if model.selectedLink == .connecting { return text("Ожидаем ответ сервера", "Waiting for the server") }
         if model.selectedLink == .signIn { return text("Завершите вход в открытом окне", "Complete sign-in in the open window") }
         if model.selectedLink == .failed { return text("Сервер не отвечает", "The server is not responding") }
+        if !model.helperReady && model.draft?.route != .proxy { return text("Откройте мастер настройки", "Open the setup assistant") }
         if !model.valid { return text("Для подключения нужны корректные параметры", "Valid settings are required to connect") }
         return text("Готово к подключению", "Ready to connect")
-    }
-    private var statusIcon: String {
-        if model.activeID == model.selectedID { return "shield-check" }
-        if model.selectedLink == .failed { return "triangle-alert" }
-        return model.selectedLink == .signIn ? "log-in" : "network"
     }
     private var connectionAction: String {
         if model.activeID == model.selectedID { return text("Отключить", "Disconnect") }
@@ -257,7 +293,7 @@ struct LabView: View {
                         .font(.system(size: 12)).foregroundStyle(LabColor.accent)
                     Spacer(minLength: 8)
                     Button(text("Открыть", "Open")) { model.beginSignIn() }
-                        .buttonStyle(.borderedProminent).tint(LabColor.accent).disabled(model.dirty || !model.valid)
+                        .buttonStyle(.borderedProminent).tint(LabColor.accent).disabled(!model.canStartConnection)
                 }
                 Text(model.dirty
                      ? text("Сначала сохраните изменения профиля.", "Save profile changes first.")
@@ -265,16 +301,29 @@ struct LabView: View {
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
             Section(text("Сохранённые данные", "Saved credentials")) {
-                credential(text("Пароль", "Password"), key: \.passwordSaved, stage: .credentialPassword)
+                if ["auto", "keychain"].contains(model.draft?.options.passwordSource ?? "auto") {
+                    credential(text("Пароль", "Password"), key: \.passwordSaved, stage: .credentialPassword)
+                } else { LabeledContent(text("Источник пароля", "Password source"), value: model.draft?.options.passwordSource ?? "auto") }
                 if model.draft?.browserLogin == true {
-                    credential(text("TOTP", "TOTP"), key: \.codeSaved, stage: .credentialCode)
+                    if ["auto", "keychain"].contains(model.draft?.options.codeSource ?? "auto") {
+                        credential("TOTP", key: \.codeSaved, stage: .credentialCode)
+                        if model.draft?.codeSaved == true {
+                            HStack {
+                                Text(DemoModel.sampleCode).font(.system(size: 17, weight: .medium, design: .monospaced))
+                                Text(text("Тестовый код · 30 с", "Sample code · 30 s")).font(.system(size: 11)).foregroundStyle(.secondary)
+                            }
+                        }
+                        DetailLink(model: model, destination: .qrImport)
+                    } else { LabeledContent(text("Источник кода", "Code source"), value: model.draft?.options.codeSource ?? "auto") }
                 } else {
                     Text(text("Код из SMS вводится при каждом входе. Сохранить его для будущих входов нельзя.", "Enter the SMS code each time. It cannot be saved for future sign-ins."))
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
-            Text(text("Изменение пароля и кода открывается в отдельном окне. Используйте только тестовые данные.", "Passwords and codes are edited in a separate window. Use sample data only."))
-                .font(.system(size: 12)).foregroundStyle(.secondary)
+            Section {
+                DetailLink(model: model, destination: .sources)
+                if model.draft?.browserLogin == true { DetailLink(model: model, destination: .rules) }
+            }
         }
     }
     private func credential(_ label: String, key: WritableKeyPath<DemoProfile, Bool>, stage: AuthStage) -> some View {
@@ -300,7 +349,7 @@ struct LabView: View {
             if model.draft?.route == .selected {
                 Section(text("Выбранные сети", "Selected networks")) {
                     routesField
-                    profileField(text("Домены DNS", "DNS domains"), key: \.dns)
+                    DetailLink(model: model, destination: .dns)
                 }
                 Text(text("Остальной трафик идёт напрямую. По одной подсети на строку.", "Other traffic connects directly. Enter one subnet per line."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
@@ -312,6 +361,7 @@ struct LabView: View {
                 Text(text("VPN доступен приложениям, настроенным на этот прокси.", "VPN is available to apps configured to use this proxy."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             } else {
+                DetailLink(model: model, destination: .dns)
                 Text(text("Весь IPv4-трафик идёт через туннель (0.0.0.0/1 и 128.0.0.0/1).", "All IPv4 traffic uses the tunnel (0.0.0.0/1 and 128.0.0.0/1)."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
@@ -324,21 +374,43 @@ struct LabView: View {
                 Text(text("Необязательно. Без имени используется адрес VPN.", "Optional. The VPN address is used when this is blank."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
+            Section(text("Параметры", "Options")) {
+                optionField(text("Описание", "Description"), key: \.description)
+                optionField(text("Доступ", "Access check"), key: \.health)
+                Toggle(text("Уведомления этого профиля", "Profile notifications"), isOn: Binding(get: { model.draft?.options.notifications ?? true }, set: { model.draft?.options.notifications = $0 }))
+            }
             Section(text("Совместимость", "Compatibility")) {
                 profileField(text("Прокси входа", "Upstream proxy"), key: \.upstreamProxy)
                 profileField("User-Agent", key: \.userAgent)
+                Menu(text("Известные клиенты", "Known clients")) {
+                    ForEach(["AnyConnect Windows 4.10.06079", "AnyConnect Darwin_i386 4.10.06079", "AnyConnect Linux_64 4.10.06079"], id: \.self) { value in
+                        Button(value) { model.draft?.userAgent = value }
+                    }
+                }
+                DetailLink(model: model, destination: .compatibility)
+                DetailLink(model: model, destination: .filePreview)
                 Text(text("Прокси: HTTP CONNECT или SOCKS5 без пароля. Пусто — прямое подключение.", "Proxy: HTTP CONNECT or SOCKS5 without authentication. Blank means a direct connection."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
+        }
+    }
+    private func optionField(_ label: String, key: WritableKeyPath<DemoOptions, String>) -> some View {
+        HStack(spacing: 12) {
+            Text(label).font(.system(size: 12)).frame(width: 88, alignment: .leading)
+            SingleLineInput(text: Binding(get: { model.draft?.options[keyPath: key] ?? "" }, set: { model.draft?.options[keyPath: key] = $0 }), label: label).frame(height: 26)
         }
     }
     private var general: some View {
         Form {
             Section {
                 Toggle(text("Запускать при входе в macOS", "Launch when signing in to macOS"), isOn: $model.launchAtLogin).tint(LabColor.accent)
-                Picker(text("Язык", "Language"), selection: $model.language) {
-                    Text("Русский").tag(Language.ru)
-                    Text("English").tag(Language.en)
+                Picker(text("Язык", "Language"), selection: Binding(get: { model.appLanguage }, set: { value in
+                    model.appLanguage = value
+                    model.language = value == "system" ? (Locale.current.identifier.hasPrefix("ru") ? .ru : .en) : Language(rawValue: value) ?? .ru
+                })) {
+                    Text(text("Как в системе", "System")).tag("system")
+                    Text("Русский").tag("ru")
+                    Text("English").tag("en")
                 }
 
             }
@@ -354,6 +426,14 @@ struct LabView: View {
                 Text(text("Профили с паролем и SMS требуют ручного входа.", "Password + SMS profiles require manual sign-in."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
+            Section {
+                DetailLink(model: model, destination: .setup)
+                DetailLink(model: model, destination: .profiles)
+                Toggle(text("Режим разработчика", "Developer mode"), isOn: $model.developer)
+                if model.developer {
+                    Button(text("Сбросить тестовый вход", "Reset sample sign-in")) { model.activeID = nil; model.pausedID = nil; model.link = .idle }
+                }
+            }
             Text(text("В демо настройки не меняют автозапуск и рабочее приложение.", "Demo settings do not change system login items or the installed VPN app."))
                 .font(.system(size: 12)).foregroundStyle(.secondary)
         }.formStyle(.grouped).scrollContentBackground(.hidden)
@@ -361,6 +441,10 @@ struct LabView: View {
     private var footer: some View {
         VStack(alignment: .leading, spacing: 8) {
             Divider()
+            if model.conflict {
+                Text(text("Файл изменён снаружи. При сохранении выберите, какие правки оставить.", "The file changed outside the editor. Choose which edits to keep when saving."))
+                    .font(.system(size: 11)).foregroundStyle(LabColor.warning)
+            }
             if model.showValidation && !model.valid {
                 Text(validationMessage)
                     .font(.system(size: 12)).foregroundStyle(.red)
@@ -381,6 +465,7 @@ struct LabView: View {
         if url?.scheme != "https" || url?.host?.isEmpty != false {
             return text("Укажите адрес VPN, например vpn.example.com/group.", "Enter a VPN address, such as vpn.example.com/group.")
         }
+        if let issue = model.extendedIssues.first { return issue }
         return text("В разделе «Сеть» укажите порт от 1 до 65535.", "In Network, enter a port from 1 to 65535.")
     }
     private var testControls: some View {

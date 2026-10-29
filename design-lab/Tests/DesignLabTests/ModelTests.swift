@@ -24,6 +24,8 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         testCredentialEditorChangesOnlyItsOwnDraft()
         testSingleLineValuesDoNotAcceptNewlines()
         testAddressFallbackAndTOTPSetup()
+        testExtendedCapabilities()
+        testEightDigitTOTP()
         print("\(checks - failures) passed; \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -77,7 +79,7 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
             model.load(scenario)
             checkEqual(model.profiles.isEmpty, model.selectedID == nil)
             if let active = model.activeID { check(model.profiles.contains { $0.id == active }) }
-            checkEqual(model.dirty, scenario == .unsaved)
+            checkEqual(model.dirty, scenario == .unsaved || scenario == .diskConflict)
         }
     }
     static func testConnectionErrorBelongsToItsOwnProfile() {
@@ -228,6 +230,111 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         checkFalse(model.secretMatchesRecordedCode())
         model.openCredential(.credentialCode)
         checkEqual(model.recordedCode, "")
+    }
+
+    static func testExtendedCapabilities() {
+        let model = DemoModel()
+        model.load(.connected)
+        let saved = model.profiles
+        model.togglePause()
+        checkEqual(model.selectedLink, .paused)
+        checkEqual(model.activeID, "work")
+        checkEqual(model.profiles, saved)
+        model.togglePause()
+        checkEqual(model.selectedLink, .connected)
+        model.select("lab")
+        model.togglePause()
+        checkNil(model.pausedID)
+        model.activeID = "home"
+        checkEqual(model.runtimeRoutes, ["0.0.0.0/1", "128.0.0.0/1"])
+        model.load(.dnsCustom)
+        check(model.valid)
+        model.draft?.zones[1].port = "65536"
+        checkFalse(model.save())
+        model.draft?.zones[1].port = "5353"
+        model.draft?.zones[1].resolver = "not-an-ip"
+        checkFalse(model.valid)
+        model.draft?.zones[1].resolver = "10.20.0.53"
+        check(model.save())
+        checkEqual(model.profiles[0].zones[1].port, "5353")
+        model.load(.commandSource)
+        check(model.valid)
+        model.draft?.options.passwordCommand = ""
+        checkFalse(model.valid)
+        model.load(.keepass)
+        check(model.valid)
+        model.draft?.options.keepassDB = ""
+        checkFalse(model.valid)
+        model.load(.diskConflict)
+        checkFalse(model.save())
+        check(model.confirmOverwrite)
+        checkEqual(model.profiles[0].user, "alex")
+        model.resolveConflict(reload: true)
+        checkFalse(model.dirty)
+        model.load(.diskConflict)
+        model.resolveConflict(reload: false)
+        checkEqual(model.profiles[0].user, "alex.updated")
+        checkFalse(model.conflict)
+        model.load(.rulesLearn)
+        model.finishLearning()
+        checkEqual(model.draft?.options.rules, "")
+        model.learningSelections = ["username", "password", "totp"]
+        model.finishLearning()
+        check(model.dirty)
+        check(model.draft!.options.rules.contains("fill totp"))
+        check(model.save())
+        model.load(.importPreview)
+        let count = model.profiles.count
+        model.importSample()
+        checkEqual(model.profiles.count, count)
+        model.selectedQR = "lab"
+        model.importTrusted = true
+        model.importSample()
+        checkEqual(model.profiles.count, count + 1)
+        checkEqual(model.draft?.displayName, "branch.example.com")
+        let selected = model.selectedID
+        model.moveProfile(selected!, by: -1)
+        checkEqual(model.selectedID, selected)
+        checkEqual(model.profiles[count - 1].id, selected)
+        model.navigate(.logs)
+        model.logFilter = "does-not-exist"
+        check(model.logLines.isEmpty)
+        model.logFilter = "DNS"
+        checkEqual(model.logLines.count, 1)
+        checkFalse(model.profilePreview.contains(DemoModel.sampleSecret))
+        model.load(.helperMissing)
+        checkFalse(model.canStartConnection)
+        model.beginSignIn()
+        checkFalse(model.authPresented)
+        model.select("lab")
+        check(model.canStartConnection)
+        model.load(.empty)
+        model.navigate(.setup)
+        checkNil(model.draft)
+        checkEqual(model.page, .general)
+    }
+    static func testEightDigitTOTP() {
+        let model = DemoModel()
+        model.draft?.options.digits = "8"
+        model.draft?.codeSaved = false
+        check(model.save())
+        model.beginSignIn()
+        checkEqual(model.expectedCode.count, 8)
+        checkEqual(DemoModel.singleCode("123456789", digits: 8), "12345678")
+        model.continueSSO()
+        model.authPassword = "demo"
+        model.submitPassword()
+        model.authCode = model.expectedCode
+        model.submitCode()
+        checkEqual(model.authStage, .rememberCode)
+        model.configureTOTPAfterSignIn()
+        model.authSecret = DemoModel.sampleSecret
+        check(model.secretMatchesRecordedCode())
+        model.saveCredential()
+        checkEqual(model.authStage, .success)
+        model.load(.commandSource)
+        model.beginSignIn()
+        checkFalse(model.canOfferTOTP)
     }
 
 }

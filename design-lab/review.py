@@ -34,7 +34,18 @@ def main():
             ('signInRejected', 'signin'), ('signInExpired', 'signin'), ('signInSuccess', 'signin'),
             ('credentialPassword', 'signin'), ('credentialCode', 'signin'),
             ('about', 'about'), ('about', 'licenses'), ('addressOnly', 'connection'),
-            ('totpOffer', 'signin'), ('totpSetup', 'signin'), ('smsCode', 'signin')
+            ('totpOffer', 'signin'), ('totpSetup', 'signin'), ('smsCode', 'signin'),
+            ('paused', 'connection'), ('connected', 'runtime'), ('paused', 'runtime'),
+            ('dnsCustom', 'dns'), ('keepass', 'sources'), ('commandSource', 'sources'),
+            ('idle', 'totpOptions'), ('totpQR', 'qrImport'), ('idle', 'rules'), ('rulesLearn', 'learning'),
+            ('idle', 'compatibility'), ('idle', 'profiles'), ('importPreview', 'transfer'),
+            ('idle', 'filePreview'), ('helperMissing', 'setup'), ('helperMissing', 'connection'), ('idle', 'setup'),
+            ('idle', 'notifications'), ('notificationsOff', 'notifications'),
+            ('diagnosticsWarning', 'diagnostics'), ('idle', 'diagnostics'), ('idle', 'logs'),
+            ('diskConflict', 'connection'), ('about', 'technical'), ('idle', 'report'),
+            ('idle', 'login-bottom'), ('idle', 'advanced-bottom'), ('idle', 'general-bottom'),
+            ('keepass', 'sources-bottom'), ('dnsCustom', 'dns-bottom'), ('idle', 'rules-bottom'),
+            ('totpEight', 'signin'), ('keepassLocked', 'sources'), ('dnsInvalid', 'dns'), ('logsEmpty', 'logs')
         ]:
             cases.append((f'{language}-{scenario}-{page}', language, scenario, page,
                           'dark' if language == 'en' else 'light'))
@@ -47,10 +58,15 @@ def main():
             done = png.with_suffix('.capture-done')
             for path in [ready, done, png, metadata]:
                 path.unlink(missing_ok=True)
-            command = ['open', '-g', '-n', '-W', str(APP), '--args', '--capture-passive',
-                       '--shot', str(png), '--scenario', scenario, '--page', page,
+            target_page = page.removesuffix('-bottom')
+            command = [str(APP / 'Contents/MacOS/DesignLab'), '--capture-passive',
+                       '--shot', str(png), '--scenario', scenario, '--page', target_page,
                        '--language', language, '--appearance', appearance,
-                       '--screen', 'signin' if page == 'signin' else 'about' if page in ['about', 'licenses'] else 'settings']
+                       '--screen', 'signin' if page == 'signin' else 'about' if page in ['about', 'licenses', 'technical'] else 'settings']
+            if page.endswith('-bottom'):
+                command += ['--scroll-bottom']
+            if page == 'technical':
+                command += ['--technical']
             if page == 'licenses':
                 command += ['--licenses']
             if scenario == 'error':
@@ -82,28 +98,39 @@ def main():
             report = json.loads(metadata.read_text())
             if report.get('binarySHA256') != binary_hash:
                 continue
-            cards.append(f'<article id="{name}"><h2>{html.escape(name)}</h2><a href="{png.name}"><img src="{png.name}?v={binary_hash[:12]}" loading="lazy"></a></article>')
+            cards.append(f'<article id="{name}" data-language="{language}"><h2>{html.escape(name)}</h2><a href="{png.name}"><img src="{png.name}?v={binary_hash[:12]}" loading="lazy"></a></article>')
     (destination / 'index.html').write_text('''<!doctype html><html lang="ru"><meta charset="utf-8">
 <title>OpenConnect for Mac · Новый дизайн</title><style>
 body{font:15px -apple-system,BlinkMacSystemFont,sans-serif;background:#f3f3f5;color:#242428;margin:32px auto;max-width:1440px;padding:0 24px}
 h1{font-size:28px}p{line-height:1.6;max-width:900px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(560px,1fr));gap:24px}
 article{background:white;border:1px solid #ddd;border-radius:12px;padding:16px}h2{font-size:14px;font-weight:500}img{width:100%;display:block}
-</style><h1>OpenConnect for Mac · Демо 0.3</h1>
-<p><a href="../capabilities-v03.html">Сравнение 31 возможности рабочего приложения и демо</a></p>
+</style><h1>OpenConnect for Mac · Демо 0.4</h1>
+<p><a href="../capabilities-v04.html">Сверка возможностей рабочего приложения и демо</a></p>
 <p><a href="#ru-idle-connection">Подключение</a> · <a href="#ru-idle-login">Настройки входа</a> ·
 <a href="#ru-signInSSO-signin">Вход SSO</a> · <a href="#ru-signInPassword-signin">Пароль</a> ·
 <a href="#ru-signInCode-signin">Одноразовый код</a> · <a href="#ru-about-about">О приложении</a></p>
-<p>Название необязательно: в списке используется адрес. Своё имя задаётся в разделе «Дополнительно». Поля адреса, пользователя и порта однострочные. Многострочный ввод — только для списка подсетей.
+<p>Знак приложения используется и в подключении. Пустое состояние — добавление профиля, без щита.
+Добавлены источники секретов, KeePassXC, DNS-зоны, правила и разметка форм, пауза, управление текущими маршрутами,
+уведомления, мастер, журналы, диагностика, импорт/экспорт и сведения о компонентах. Действия имитируются в памяти.</p>
+<p><a href="#ru-dnsCustom-dns">DNS</a> · <a href="#ru-keepass-sources">KeePassXC</a> ·
+<a href="#ru-rulesLearn-learning">Разметка</a> · <a href="#ru-idle-notifications">Уведомления</a> ·
+<a href="#ru-diagnosticsWarning-diagnostics">Диагностика</a> · <a href="#ru-idle-logs">Журналы</a></p>
+<p><label>Язык: <select id="language"><option value="">RU + EN</option><option value="ru">Русский</option><option value="en">English</option></select></label>
+<label> Найти экран: <input id="search" placeholder="dns, sources, setup, paused…"></label></p>
+<p>Название необязательно: в списке используется адрес. Своё имя задаётся в разделе «Дополнительно». Поля адреса, пользователя и порта однострочные. Многострочный ввод — для подсетей и правил формы.
 Иконки <a href="https://lucide.dev/license">Lucide (ISC / MIT)</a>. Синий акцент для навигации и действий;
 зелёный, оранжевый и красный — для состояния соединения.</p>
 <p>Отдельное нативное демоприложение, окно 680 × 620. Постоянная навигация слева, профиль сверху, сохранение снизу.
 «Дополнительно» — отдельный раздел. При открытии выбирается активный профиль, затем последний выбранный, затем первый доступный.</p>
-<p>В нижней панели Demo переключаются 24 сценария, язык и оформление. Кнопка со стрелкой открывает настройки заново и проверяет выбор профиля.
+<p>В нижней панели Demo переключаются 39 сценариев, язык и оформление. Кнопка со стрелкой открывает настройки заново и проверяет выбор профиля.
 Вход проверяется от начала до конца: пароль <code>demo</code>, код <code>287082</code>.
 Все подключения, пароли и параметры — тестовые. Приложение не обращается к рабочему VPN.</p>
 <p>Сняты настоящие окна на встроенном экране без фокуса и перехвата мыши. Нативные контролы неактивны: эти кадры проверяют компоновку, а не активные цвета.</p>
-<div class="grid">''' + ''.join(cards) + '</div></html>')
-    (destination / 'v03.html').write_text((destination / 'index.html').read_text())
+<div class="grid">''' + ''.join(cards) + '''</div><script>
+function filterCards(){const lang=document.querySelector('#language').value;const query=document.querySelector('#search').value.toLowerCase();document.querySelectorAll('article').forEach(card=>{card.hidden=Boolean((lang&&card.dataset.language!==lang)||!card.id.toLowerCase().includes(query));});}
+document.querySelector('#language').addEventListener('change',filterCards);document.querySelector('#search').addEventListener('input',filterCards);
+</script></html>''')
+    (destination / 'v04.html').write_text((destination / 'index.html').read_text())
 
 
 if __name__ == '__main__':

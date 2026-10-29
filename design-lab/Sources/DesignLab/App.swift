@@ -42,9 +42,11 @@ final class LabDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         model = DemoModel(preferences: passive ? nil : UserDefaults(suiteName: "ru.ocmac.designlab"))
         model.language = Language(rawValue: argument("--language") ?? "ru") ?? .ru
         if let scenario = argument("--scenario").flatMap(Scenario.init(rawValue:)) { model.load(scenario) }
-        if let page = argument("--page").flatMap(Page.init(rawValue:)) { model.page = page }
+        if let page = argument("--page").flatMap(Page.init(rawValue:)) { model.page = page; model.detail = nil }
+        if let detail = argument("--page").flatMap(Detail.init(rawValue:)) { model.navigate(detail) }
         model.appearance = argument("--appearance") ?? "system"
         model.showDetails = CommandLine.arguments.contains("--details")
+        model.aboutTechnical = CommandLine.arguments.contains("--technical")
         model.aboutLicenses = CommandLine.arguments.contains("--licenses")
         if passive { Task { await PassiveCapture.run(model: model) }; return }
         installMenus()
@@ -131,6 +133,7 @@ struct AppearanceView: View {
             case .about: AboutView(model: model)
             }
         }
+            .tint(LabColor.accent)
             .preferredColorScheme(model.appearance == "light" ? .light : model.appearance == "dark" ? .dark : nil)
             .environment(\.locale, Locale(identifier: model.language.rawValue))
     }

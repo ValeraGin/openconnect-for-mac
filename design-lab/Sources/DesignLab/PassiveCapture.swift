@@ -37,6 +37,16 @@ enum PassiveCapture {
         panel.orderFrontRegardless()
         defer { panel.orderOut(nil) }
         try? await Task.sleep(for: .seconds(1))
+        if CommandLine.arguments.contains("--scroll-bottom"), let content = panel.contentView {
+            func scrollViews(_ view: NSView) -> [NSScrollView] {
+                (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews)
+            }
+            if let scroll = scrollViews(content).max(by: { $0.frame.height < $1.frame.height }), let doc = scroll.documentView {
+                scroll.contentView.scroll(to: NSPoint(x: 0, y: doc.isFlipped ? max(0, doc.bounds.height - scroll.contentSize.height) : 0))
+                scroll.reflectScrolledClipView(scroll.contentView)
+                try? await Task.sleep(for: .milliseconds(300))
+            }
+        }
         func valid() -> Bool {
             !activated && !NSApp.isActive && !panel.isKeyWindow && !panel.isMainWindow && panel.isVisible
             && panel.screen.map(displayID) == displayID(screen) && screen.visibleFrame.contains(panel.frame)
@@ -60,7 +70,8 @@ enum PassiveCapture {
             "displayID": displayID(screen), "scenario": model.scenario.rawValue,
             "page": model.page.rawValue, "language": model.language.rawValue,
             "width": surface.size.width, "height": surface.size.height, "screen": surface.rawValue,
-            "syntheticData": true]
+            "syntheticData": true, "detail": model.detail?.rawValue ?? "",
+            "scrolledBottom": CommandLine.arguments.contains("--scroll-bottom")]
         do {
             try JSONSerialization.data(withJSONObject: metadata, options: [.prettyPrinted, .sortedKeys])
                 .write(to: output.deletingPathExtension().appendingPathExtension("json"))

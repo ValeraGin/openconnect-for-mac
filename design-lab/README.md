@@ -13,7 +13,7 @@ bash design-lab/test.sh
 ```
 
 The window is fixed at 680 × 620. Connection, Sign-in, Network, Advanced and
-Application are always visible in the sidebar. Profile changes retain the current
+Application, Notifications and Diagnostics are always visible in the sidebar. Profile changes retain the current
 section. Opening settings selects an existing active profile, then the last
 selected profile, then the first available profile. Unsaved edits prompt before
 switching profiles; invalid edits cannot be saved or connected.
@@ -29,7 +29,8 @@ keeps the previous profile connected. No external browser or network is opened.
 The saved-credential buttons open editors; credential changes apply immediately
 to the in-memory profile independently of Save, like production secret storage.
 Launch-at-login changes in-memory state only.
-Profile additions and edits are intentionally disposable.
+Profile additions and edits are intentionally disposable. Export and report buttons
+can save a synthetic file only after the user chooses its destination.
 
 Profile names are optional: the address is the fallback display label, while
 the stable profile ID stays unchanged. A custom name lives under Advanced.
@@ -42,12 +43,15 @@ Scenarios: disconnected, connected, connecting, server error, no profiles, one
 profile, 20 profiles, long values, missing fields, unsaved changes, SOCKS warning;
 SSO, password, one-time code, rejected sign-in, expired code, successful sign-in;
 password and secret editors, an unnamed profile, TOTP offer/setup, SMS, and About.
+Version 0.4 has 39 fixtures, adding pause, custom/invalid DNS, KeePassXC locked/unlocked,
+command sources, form mapping, blocked notifications, missing helper, diagnostics
+failure, external-file conflict, sample import, QR import, eight-digit TOTP and empty logs.
 The 440 × 540 sign-in and About windows
 open from settings; About is also available in the application menu.
 
 Name, URL, username, DNS domains, port, upstream proxy and User-Agent use native single-line
 NSTextFields. Long values scroll during editing and have full-value tooltips.
-Only the subnet list is multiline. Blue identifies navigation/actions; green,
+Only subnet lists and sign-in rules are multiline. Blue identifies navigation/actions; green,
 orange and red identify success, warnings and errors. Passive native controls
 still use macOS inactive styling.
 
@@ -60,8 +64,8 @@ See <https://lucide.dev/license> and <https://github.com/lucide-icons/lucide>.
 
 The prototype covers common settings to validate hierarchy and navigation; it is
 not a feature-complete replacement for the production editor.
-`capabilities.json` documents 31 source-backed comparisons, new UX and omissions.
-Regenerate it and the readable `.local/design-lab/capabilities-v03.html` report:
+`capabilities.json` documents 39 source-backed comparisons, new UX and omissions.
+Regenerate it and the readable `.local/design-lab/capabilities-v04.html` report:
 
 ```sh
 python3 design-lab/compare-capabilities.py
@@ -69,10 +73,23 @@ python3 design-lab/compare-capabilities.py
 
 Production has no editable certificate fingerprint or per-profile reconnect
 setting, so those controls were removed. Autoconnect is a global policy. IPv4
-full-tunnel routing is labelled explicitly. Before production integration, design
-work remains for DNS resolvers/ports, credential sources, form rules, notifications,
-diagnostics, logs, pause/resume and setup/import/export. Source inspection does not
-replace live VPN regression testing.
+full-tunnel routing is labelled explicitly. Secondary screens now cover DNS resolvers/ports,
+credential sources, KeePassXC, form rules/mapping, compatibility, notifications,
+diagnostics, logs, pause/resume, setup and import/export. Profile management covers
+ordering and a legacy conversion example. About links to component/file information.
+The connection card and navigation reuse the real app mark; the empty state uses
+Lucide folder-plus, not a shield.
+
+Actions simulate the intended behavior without invoking the production engine.
+Integration must retain the real ProfileDoc parser (comments, unknown fields and
+backup/conflict semantics), server-owned WebView forms, system permissions, QR
+capture, live credential sources, TOTP timer and log streams. Source inspection and
+synthetic tests do not replace live VPN regression testing.
+
+The helper-missing fixture blocks tunnel sign-in while permitting SOCKS. Pause keeps
+the synthetic session alive and disables runtime routes/DNS without editing the
+saved profile. Secret writes apply independently of profile Save. The setup resource
+check is transient, so it does not leave the profile dirty or block sign-in.
 
 ```sh
 python3 design-lab/review.py --capture-passive
@@ -80,9 +97,11 @@ python3 design-lab/review.py --capture-passive --only ru-idle-connection
 ```
 
 Review explicitly requires a non-mirrored built-in screen. The diagnostic panel
-cannot become key/main or receive mouse input. The runner uses `open -g` and
+cannot become key/main or receive mouse input. The runner launches the bundle executable directly in accessory mode and
 captures the native window with `screencapture`; JSON sidecars validate focus and
 display before accepting images. No external-screen fallback or active capture.
 Native controls are inactive; do not use these frames to approve active colors.
-The gallery is `.local/design-lab/review/index.html`. Normal interactive launch is
+The versioned gallery is `.local/design-lab/review/v04.html` (also `index.html`).
+Long forms also have `-bottom` captures; the capture host scrolls only its own passive
+window. Metadata records the selected detail and scroll request. Normal interactive launch is
 only for the user to open when ready; automated review never activates it.

@@ -3,7 +3,8 @@ import Combine
 
 enum Language: String, CaseIterable { case ru, en }
 enum Page: String, CaseIterable {
-    case connection, login, network, advanced, general
+    case connection, login, network, advanced, general, notifications, diagnostics
+    var isGlobal: Bool { [.general, .notifications, .diagnostics].contains(self) }
     var icon: String {
         switch self {
         case .connection: return "network"
@@ -11,6 +12,8 @@ enum Page: String, CaseIterable {
         case .network: return "route"
         case .advanced: return "sliders-horizontal"
         case .general: return "settings"
+        case .notifications: return "bell"
+        case .diagnostics: return "activity"
         }
     }
 }
@@ -18,8 +21,9 @@ enum Scenario: String, CaseIterable {
     case idle, connected, connecting, error, empty, single, many, long, missing, unsaved, proxyWarning
     case signInSSO, signInPassword, signInCode, signInRejected, signInExpired, signInSuccess
     case credentialPassword, credentialCode, about, addressOnly, totpOffer, totpSetup, smsCode
+    case paused, dnsCustom, keepass, commandSource, rulesLearn, notificationsOff, helperMissing, diagnosticsWarning, diskConflict, importPreview, totpQR, totpEight, keepassLocked, dnsInvalid, logsEmpty
 }
-enum LinkState { case idle, connecting, signIn, connected, failed }
+enum LinkState { case idle, connecting, signIn, connected, paused, failed }
 enum RouteMode: String, CaseIterable { case all, selected, proxy }
 struct DemoProfile: Identifiable, Equatable {
     var id: String
@@ -31,7 +35,8 @@ struct DemoProfile: Identifiable, Equatable {
     var codeSaved = false
     var route: RouteMode = .selected
     var routes = "10.20.0.0/16\n192.168.50.0/24"
-    var dns = "corp.example"
+    var zones = [DemoZone(zone: "corp.example", resolver: "vpn", port: "53")]
+    var options = DemoOptions()
     var port = "11080"
     var systemProxy = false
     var upstreamProxy = ""
@@ -80,6 +85,37 @@ final class DemoModel: ObservableObject {
     @Published var autoPolicy = "resume"
     @Published var skipNetwork = false
     @Published var aboutLicenses = false
+    @Published var aboutTechnical = false
+    @Published var detail: Detail?
+    @Published var pausedID: String?
+    @Published var disabledRoutes = Set<String>()
+    @Published var disabledZones = Set<String>()
+    @Published var developer = false
+    @Published var appLanguage = "system"
+    @Published var legacyAvailable = true
+    @Published var notifyLogin = true
+    @Published var notifyProblems = true
+    @Published var notifyEvents = false
+    @Published var notificationsAllowed = true
+    @Published var helperReady = true
+    @Published var diagnosticsIssue = false
+    @Published var logSource = "supervisor"
+    @Published var logFilter = ""
+    @Published var followLog = true
+    @Published var conflict = false
+    @Published var confirmOverwrite = false
+    @Published var learningStep = 0
+    @Published var learningSelections = Set<String>()
+    @Published var importTrusted = false
+    @Published var setupStep = 0
+    @Published var accessChecked = false
+    @Published var setupResource = ""
+    @Published var selectedImport = "branch"
+    @Published var selectedQR = "branch"
+    @Published var qrSource = "screen"
+    @Published var qrDetected = false
+    @Published var keepassUnlocked = true
+
     private let preferences: UserDefaults?
     private var lastSelected: String?
 
@@ -97,6 +133,8 @@ final class DemoModel: ObservableObject {
         case .network: return t("Сеть", "Network")
         case .advanced: return t("Дополнительно", "Advanced")
         case .general: return t("Приложение", "Application")
+        case .notifications: return t("Уведомления", "Notifications")
+        case .diagnostics: return t("Диагностика", "Diagnostics")
         }
     }
     func title(_ scenario: Scenario) -> String {
@@ -125,6 +163,21 @@ final class DemoModel: ObservableObject {
         case .totpOffer: return t("Предложить TOTP", "Offer TOTP setup")
         case .totpSetup: return t("Настройка TOTP", "TOTP setup")
         case .smsCode: return t("Код из SMS", "SMS code")
+        case .paused: return t("Пауза", "Paused")
+        case .dnsCustom: return t("Свой DNS", "Custom DNS")
+        case .keepass: return "KeePassXC"
+        case .commandSource: return t("Секрет из команды", "Command source")
+        case .rulesLearn: return t("Разметка формы", "Teach sign-in")
+        case .notificationsOff: return t("Уведомления запрещены", "Notifications blocked")
+        case .helperMissing: return t("Нет помощника", "Helper missing")
+        case .diagnosticsWarning: return t("Проблема доступа", "Access failure")
+        case .diskConflict: return t("Конфликт правок", "File conflict")
+        case .importPreview: return t("Импорт профиля", "Import profile")
+        case .totpQR: return t("Импорт QR", "QR import")
+        case .totpEight: return t("Код из 8 цифр", "Eight-digit code")
+        case .keepassLocked: return t("KeePassXC закрыт", "KeePassXC locked")
+        case .dnsInvalid: return t("Ошибка DNS", "Invalid DNS")
+        case .logsEmpty: return t("Пустой поиск журнала", "No log matches")
         }
     }
     var dirty: Bool {
@@ -132,14 +185,16 @@ final class DemoModel: ObservableObject {
         return profiles.first(where: { $0.id == draft.id }) != draft
     }
     var selectedLink: LinkState {
-        activeID == selectedID && selectedID != nil ? .connected : linkTarget == selectedID ? link : .idle
+        activeID == selectedID && selectedID != nil ? (pausedID == selectedID ? .paused : .connected) : linkTarget == selectedID ? link : .idle
     }
+    var canStartConnection: Bool { !dirty && valid && (draft?.route == .proxy || helperReady) }
     var valid: Bool {
         guard let draft else { return false }
         let url = URL(string: draft.server.contains("://") ? draft.server : "https://" + draft.server)
         return !draft.server.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !draft.server.contains(" ") && url?.scheme == "https" && !(url?.host?.isEmpty ?? true)
             && (draft.route != .proxy || Int(draft.port).map { (1...65535).contains($0) } == true)
+            && extendedIssues.isEmpty
     }
     static func initialSelection(ids: [String], active: String?, last: String?) -> String? {
         if let active, ids.contains(active) { return active }
@@ -148,7 +203,7 @@ final class DemoModel: ObservableObject {
     }
     func reopen() {
         select(Self.initialSelection(ids: profiles.map(\.id), active: activeID, last: lastSelected))
-        page = .connection
+        page = .connection; detail = nil
     }
     func select(_ id: String?) {
         selectedID = id
@@ -171,6 +226,7 @@ final class DemoModel: ObservableObject {
     }
     @discardableResult func save() -> Bool {
         guard valid, let draft else { showValidation = true; return false }
+        if conflict { confirmOverwrite = true; return false }
         if let index = profiles.firstIndex(where: { $0.id == draft.id }) { profiles[index] = draft }
         else { profiles.append(draft) }
         showValidation = false
@@ -185,9 +241,9 @@ final class DemoModel: ObservableObject {
         page = .connection
     }
     func toggleConnection() {
-        guard let selectedID, !dirty, valid else { showValidation = true; return }
+        guard let selectedID, activeID == selectedID || selectedLink == .connecting || canStartConnection else { showValidation = true; return }
         if activeID == selectedID {
-            activeID = nil; link = .idle
+            activeID = nil; pausedID = nil; link = .idle
         } else if selectedLink == .connecting {
             link = .idle
         } else if selectedLink == .signIn && authTargetID == selectedID {
@@ -198,6 +254,13 @@ final class DemoModel: ObservableObject {
     }
     func load(_ scenario: Scenario) {
         self.scenario = scenario
+        detail = nil; page = .connection; pausedID = nil
+        disabledRoutes = []; disabledZones = []; conflict = false; confirmOverwrite = false
+        learningStep = 0; learningSelections = []; importTrusted = false
+        diagnosticsIssue = false; helperReady = true; notificationsAllowed = true
+        accessChecked = false; setupStep = 0; qrSource = "screen"; qrDetected = false
+        legacyAvailable = true
+        aboutTechnical = false; keepassUnlocked = true; logFilter = ""
         authPresented = false; aboutPresented = false; aboutLicenses = false
         authPassword = ""; authCode = ""; authSecret = ""; recordedCode = ""; authError = false; totpAfterLogin = false
         profiles = [
@@ -205,7 +268,7 @@ final class DemoModel: ObservableObject {
             DemoProfile(id: "home", name: t("Дом", "Home"), server: "https://home.example.com", user: "alex", route: .all),
             DemoProfile(id: "lab", name: t("Тестовая сеть", "Test network"), server: "https://lab.example.com", user: "tester", route: .proxy)
         ]
-        activeID = nil; link = .idle; linkTarget = "work"; pendingSelection = nil; showUnsaved = false
+        activeID = nil; pausedID = nil; link = .idle; linkTarget = "work"; pendingSelection = nil; showUnsaved = false
         if scenario == .empty { profiles = [] }
         if scenario == .single { profiles = Array(profiles.prefix(1)) }
         if scenario == .many {
@@ -228,6 +291,7 @@ final class DemoModel: ObservableObject {
         select(Self.initialSelection(ids: profiles.map(\.id), active: activeID, last: scenario == .idle ? lastSelected : nil))
         if scenario == .unsaved { draft?.user = "alex.updated" }
         if scenario == .missing { showValidation = true }
+        loadExtendedFixture(scenario)
         loadAuthFixture(scenario)
         if scenario == .about { aboutPresented = true }
     }
