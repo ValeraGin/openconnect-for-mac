@@ -109,3 +109,14 @@ shows accepted/expected counts so an incomplete run cannot appear complete.
 Long forms also have `-bottom` captures; the capture host scrolls only its own passive
 window. Metadata records the selected detail and scroll request. Normal interactive launch is
 only for the user to open when ready; automated review never activates it.
+
+Review after the RU/EN pass (2026-10-30): 178 planned passive frames, covering all
+39 fixtures plus overflow, second wizard/mapping steps, code/secret errors, empty
+lists, credential-source summaries and edited drafts during an active session.
+`ReviewStates.swift` supplies reachable sample states only in the passive launch path;
+model tests exercise the changed state semantics. Sign-in content scrolls inside its
+fixed window while Close stays visible. Empty profiles have localized labels;
+paused profiles, unsaved edits and file conflicts have explicit status text.
+Credential-source summaries are localized, and the settings TOTP example follows
+its configured digits/algorithm/period. Current-session controls read the saved
+profile rather than unsaved form edits. Native active-color review remains separate.

@@ -65,8 +65,9 @@ enum Detail: String, CaseIterable {
 
 extension DemoModel {
     func navigate(_ destination: Detail) { page = destination.page; detail = destination; notice = "" }
+    var activeProfile: DemoProfile? { profiles.first { $0.id == activeID } }
     var runtimeRoutes: [String] {
-        guard let p = profiles.first(where: { $0.id == activeID }) else { return [] }
+        guard let p = activeProfile else { return [] }
         if p.route == .all { return ["0.0.0.0/1", "128.0.0.0/1"] }
         return p.routes.split(separator: "\n").map(String.init).filter { !$0.hasPrefix("#") && !$0.hasPrefix(";") }
     }
@@ -108,7 +109,7 @@ extension DemoModel {
         return issues
     }
     func togglePause() {
-        guard let id = selectedID, activeID == id, draft?.route != .proxy else { return }
+        guard let id = selectedID, activeID == id, activeProfile?.route != .proxy else { return }
         pausedID = pausedID == id ? nil : id
     }
     func moveProfile(_ id: String, by offset: Int) {

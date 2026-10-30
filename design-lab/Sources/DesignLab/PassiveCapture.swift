@@ -70,7 +70,7 @@ enum PassiveCapture {
             "displayID": displayID(screen), "scenario": model.scenario.rawValue,
             "page": model.page.rawValue, "language": model.language.rawValue,
             "width": surface.size.width, "height": surface.size.height, "screen": surface.rawValue,
-            "syntheticData": true, "detail": model.detail?.rawValue ?? "",
+            "syntheticData": true, "variant": argument("--variant") ?? "", "detail": model.detail?.rawValue ?? "",
             "scrolledBottom": CommandLine.arguments.contains("--scroll-bottom")]
         do {
             try JSONSerialization.data(withJSONObject: metadata, options: [.prettyPrinted, .sortedKeys])

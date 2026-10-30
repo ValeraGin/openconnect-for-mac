@@ -112,8 +112,7 @@ struct LabView: View {
                 Picker(text("Профиль", "Profile"), selection: Binding(
                     get: { model.selectedID ?? "" }, set: { model.requestSelection($0) })) {
                         ForEach(model.profiles) { profile in
-                            Text(profile.displayName
-                                 + (model.activeID == profile.id ? text(" • подключён", " • connected") : ""))
+                            Text(model.profileMenuTitle(profile))
                                 .tag(profile.id)
                         }
                     }
@@ -206,7 +205,7 @@ struct LabView: View {
             }
             if model.activeID == model.selectedID {
                 Section {
-                    if model.draft?.route != .proxy {
+                    if model.activeProfile?.route != .proxy {
                         Button(model.pausedID == model.selectedID ? text("Возобновить", "Resume") : text("Приостановить", "Pause")) { model.togglePause() }
                     }
                     DetailLink(model: model, destination: .runtime)
@@ -224,7 +223,7 @@ struct LabView: View {
     }
     private func profileField(_ label: String, key: WritableKeyPath<DemoProfile, String>) -> some View {
         HStack(alignment: .center, spacing: 12) {
-            Text(label).font(.system(size: 12)).frame(width: 88, alignment: .leading)
+            Text(label).font(.system(size: 12)).frame(width: 104, alignment: .leading)
             SingleLineInput(text: field(key, fallback: ""), label: label).frame(height: 26)
         }.frame(maxWidth: .infinity)
     }
@@ -244,7 +243,7 @@ struct LabView: View {
         if model.activeID == model.selectedID { return LabColor.success }
         if model.selectedLink == .failed { return LabColor.failure }
         if !model.helperReady && model.draft?.route != .proxy { return LabColor.warning }
-        if !model.valid { return LabColor.warning }
+        if !model.valid || model.dirty || model.conflict { return LabColor.warning }
         if model.selectedLink == .connecting || model.selectedLink == .signIn { return LabColor.accent }
         return .secondary
     }
@@ -266,6 +265,8 @@ struct LabView: View {
         if model.selectedLink == .failed { return text("Сервер не отвечает", "The server is not responding") }
         if !model.helperReady && model.draft?.route != .proxy { return text("Откройте мастер настройки", "Open the setup assistant") }
         if !model.valid { return text("Для подключения нужны корректные параметры", "Valid settings are required to connect") }
+        if model.conflict { return text("Разрешите конфликт изменений", "Resolve the file conflict first") }
+        if model.dirty { return text("Сначала сохраните изменения", "Save changes before connecting") }
         return text("Готово к подключению", "Ready to connect")
     }
     private var connectionAction: String {
@@ -297,24 +298,24 @@ struct LabView: View {
                 }
                 Text(model.dirty
                      ? text("Сначала сохраните изменения профиля.", "Save profile changes first.")
-                     : text("Вход → одноразовый код → подключение. Пароль demo, код 287082.", "Sign-in → one-time code → connection. Password demo, code 287082."))
+                     : text("Вход → одноразовый код → подключение. Пароль demo, код \(model.selectedDemoCode).", "Sign-in → one-time code → connection. Password demo, code \(model.selectedDemoCode)."))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
             Section(text("Сохранённые данные", "Saved credentials")) {
                 if ["auto", "keychain"].contains(model.draft?.options.passwordSource ?? "auto") {
                     credential(text("Пароль", "Password"), key: \.passwordSaved, stage: .credentialPassword)
-                } else { LabeledContent(text("Источник пароля", "Password source"), value: model.draft?.options.passwordSource ?? "auto") }
+                } else { LabeledContent(text("Источник пароля", "Password source"), value: model.sourceTitle(model.draft?.options.passwordSource ?? "auto")) }
                 if model.draft?.browserLogin == true {
                     if ["auto", "keychain"].contains(model.draft?.options.codeSource ?? "auto") {
                         credential("TOTP", key: \.codeSaved, stage: .credentialCode)
                         if model.draft?.codeSaved == true {
                             HStack {
-                                Text(DemoModel.sampleCode).font(.system(size: 17, weight: .medium, design: .monospaced))
-                                Text(text("Тестовый код · 30 с", "Sample code · 30 s")).font(.system(size: 11)).foregroundStyle(.secondary)
+                                Text(model.selectedDemoCode).font(.system(size: 17, weight: .medium, design: .monospaced))
+                                Text(text("Тестовый код · \(model.draft?.options.period ?? "30") с", "Sample code · \(model.draft?.options.period ?? "30") s")).font(.system(size: 11)).foregroundStyle(.secondary)
                             }
                         }
                         DetailLink(model: model, destination: .qrImport)
-                    } else { LabeledContent(text("Источник кода", "Code source"), value: model.draft?.options.codeSource ?? "auto") }
+                    } else { LabeledContent(text("Источник кода", "Code source"), value: model.sourceTitle(model.draft?.options.codeSource ?? "auto")) }
                 } else {
                     Text(text("Код из SMS вводится при каждом входе. Сохранить его для будущих входов нельзя.", "Enter the SMS code each time. It cannot be saved for future sign-ins."))
                         .font(.system(size: 12)).foregroundStyle(.secondary)
@@ -382,10 +383,14 @@ struct LabView: View {
             Section(text("Совместимость", "Compatibility")) {
                 profileField(text("Прокси входа", "Upstream proxy"), key: \.upstreamProxy)
                 profileField("User-Agent", key: \.userAgent)
-                Menu(text("Известные клиенты", "Known clients")) {
+                HStack {
+                    Text(text("Известные клиенты", "Known clients"))
+                    Spacer()
+                    Menu(text("Выбрать…", "Choose…")) {
                     ForEach(["AnyConnect Windows 4.10.06079", "AnyConnect Darwin_i386 4.10.06079", "AnyConnect Linux_64 4.10.06079"], id: \.self) { value in
                         Button(value) { model.draft?.userAgent = value }
                     }
+                    }.fixedSize()
                 }
                 DetailLink(model: model, destination: .compatibility)
                 DetailLink(model: model, destination: .filePreview)
@@ -396,7 +401,7 @@ struct LabView: View {
     }
     private func optionField(_ label: String, key: WritableKeyPath<DemoOptions, String>) -> some View {
         HStack(spacing: 12) {
-            Text(label).font(.system(size: 12)).frame(width: 88, alignment: .leading)
+            Text(label).font(.system(size: 12)).frame(width: 104, alignment: .leading)
             SingleLineInput(text: Binding(get: { model.draft?.options[keyPath: key] ?? "" }, set: { model.draft?.options[keyPath: key] = $0 }), label: label).frame(height: 26)
         }
     }

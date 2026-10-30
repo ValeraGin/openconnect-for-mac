@@ -9,11 +9,14 @@ extension DemoModel {
     static let sampleSecret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
     static let sampleTime = Date(timeIntervalSince1970: 59)
     static var sampleCode: String { TOTP.code(secretBase32: sampleSecret, at: sampleTime)! }
-    var expectedCode: String {
-        guard let o = authProfile?.options, !smsSignIn else { return Self.sampleCode }
-        return TOTP.code(secretBase32: Self.sampleSecret, at: Self.sampleTime,
-                         params: TOTPParams(algorithm: o.algorithm, digits: Int(o.digits) ?? 6, period: Int(o.period) ?? 30)) ?? Self.sampleCode
+    static func demoCode(for profile: DemoProfile?) -> String {
+        guard let profile, profile.browserLogin else { return sampleCode }
+        let o = profile.options
+        return TOTP.code(secretBase32: sampleSecret, at: sampleTime,
+                         params: TOTPParams(algorithm: o.algorithm, digits: Int(o.digits) ?? 6, period: Int(o.period) ?? 30)) ?? sampleCode
     }
+    var expectedCode: String { Self.demoCode(for: authProfile) }
+    var selectedDemoCode: String { Self.demoCode(for: draft) }
     var smsSignIn: Bool { authProfile?.browserLogin == false }
     var canOfferTOTP: Bool { !smsSignIn && authProfile?.codeSaved == false && ["auto", "keychain"].contains(authProfile?.options.codeSource ?? "auto") }
     func secretMatchesRecordedCode() -> Bool {

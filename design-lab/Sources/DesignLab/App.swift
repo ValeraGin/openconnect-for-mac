@@ -44,6 +44,7 @@ final class LabDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if let scenario = argument("--scenario").flatMap(Scenario.init(rawValue:)) { model.load(scenario) }
         if let page = argument("--page").flatMap(Page.init(rawValue:)) { model.page = page; model.detail = nil }
         if let detail = argument("--page").flatMap(Detail.init(rawValue:)) { model.navigate(detail) }
+        if passive, let variant = argument("--variant") { model.applyReviewVariant(variant) }
         model.appearance = argument("--appearance") ?? "system"
         model.showDetails = CommandLine.arguments.contains("--details")
         model.aboutTechnical = CommandLine.arguments.contains("--technical")

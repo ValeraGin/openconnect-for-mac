@@ -46,7 +46,7 @@ struct DemoProfile: Identifiable, Equatable {
         if !custom.isEmpty { return custom }
         let address = server.trimmingCharacters(in: .whitespacesAndNewlines)
         let value = address.contains("://") ? address : "https://" + address
-        if let components = URLComponents(string: value), let host = components.host {
+        if let components = URLComponents(string: value), let host = components.host, !host.isEmpty {
             return host + (components.port.map { ":\($0)" } ?? "") + components.path
         }
         return address.isEmpty ? "—" : address
@@ -180,6 +180,26 @@ final class DemoModel: ObservableObject {
         case .logsEmpty: return t("Пустой поиск журнала", "No log matches")
         }
     }
+    func profileTitle(_ profile: DemoProfile) -> String {
+        profile.displayName == "—" ? t("Новый профиль", "New profile") : profile.displayName
+    }
+    func profileMenuTitle(_ profile: DemoProfile) -> String {
+        let suffix = activeID != profile.id ? "" : pausedID == profile.id
+            ? t(" • пауза", " • paused") : t(" • подключён", " • connected")
+        return profileTitle(profile) + suffix
+    }
+    func sourceTitle(_ source: String) -> String {
+        switch source {
+        case "auto": return t("Авто", "Auto")
+        case "keychain": return t("Связка ключей", "Keychain")
+        case "keepassxc": return "KeePassXC"
+        case "command": return t("Команда", "Command")
+        case "ask": return t("Вводить вручную", "Ask each time")
+        case "sms": return "SMS"
+        case "off": return t("Выключено", "Off")
+        default: return source
+        }
+    }
     var dirty: Bool {
         guard let draft else { return false }
         return profiles.first(where: { $0.id == draft.id }) != draft
@@ -187,7 +207,7 @@ final class DemoModel: ObservableObject {
     var selectedLink: LinkState {
         activeID == selectedID && selectedID != nil ? (pausedID == selectedID ? .paused : .connected) : linkTarget == selectedID ? link : .idle
     }
-    var canStartConnection: Bool { !dirty && valid && (draft?.route == .proxy || helperReady) }
+    var canStartConnection: Bool { !conflict && !dirty && valid && (draft?.route == .proxy || helperReady) }
     var valid: Bool {
         guard let draft else { return false }
         let url = URL(string: draft.server.contains("://") ? draft.server : "https://" + draft.server)

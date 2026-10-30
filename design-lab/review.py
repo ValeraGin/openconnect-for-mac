@@ -60,12 +60,23 @@ def main():
             ('diskConflict', 'connection'), ('about', 'technical'), ('idle', 'report'),
             ('idle', 'login-bottom'), ('idle', 'advanced-bottom'), ('idle', 'general-bottom'),
             ('keepass', 'sources-bottom'), ('dnsCustom', 'dns-bottom'), ('idle', 'rules-bottom'),
-            ('totpEight', 'signin'), ('keepassLocked', 'sources'), ('dnsInvalid', 'dns'), ('logsEmpty', 'logs')
+            ('totpEight', 'signin'), ('keepassLocked', 'sources'), ('dnsInvalid', 'dns'), ('logsEmpty', 'logs'),
+            ('long', 'signin@long-password'), ('long', 'signin@long-success'),
+            ('credentialCode', 'signin@secret-error'), ('signInCode', 'signin@code-error'),
+            ('idle', 'setup@profile-step'), ('idle', 'setup@signin-step'), ('connected', 'setup@access-ok'),
+            ('rulesLearn', 'learning@second-step'), ('rulesLearn', 'rules@mapped'),
+            ('connected', 'runtime@runtime-edited'), ('idle', 'network@full-tunnel'),
+            ('idle', 'dns@empty-dns'), ('totpQR', 'qrImport@text'),
+            ('idle', 'general@developer'), ('idle', 'notifications@preview'),
+            ('connected', 'connection@other-profile'), ('keepass', 'login'), ('commandSource', 'login'),
+            ('totpEight', 'login'), ('empty', 'profiles'), ('empty', 'transfer'), ('many', 'profiles-bottom'),
+            ('long', 'signin-bottom@long-password'), ('signInCode', 'signin-bottom@code-error')
         ]:
             cases.append((f'{language}-{scenario}-{page}', language, scenario, page,
                           'dark' if language == 'en' else 'light'))
     cards = []
     for name, language, scenario, page, appearance in cases:
+        page, _, variant = page.partition('@')
         png = destination / f'{name}.png'
         metadata = png.with_suffix('.json')
         already_current = png.exists() and metadata.exists() and json.loads(metadata.read_text()).get('binarySHA256') == binary_hash
@@ -79,7 +90,9 @@ def main():
             command = ['open', '-g', '-n', '-W', str(APP), '--args', '--capture-passive',
                        '--shot', str(png), '--scenario', scenario, '--page', target_page,
                        '--language', language, '--appearance', appearance,
-                       '--screen', 'signin' if page == 'signin' else 'about' if page in ['about', 'licenses', 'technical'] else 'settings']
+                       '--screen', 'signin' if target_page == 'signin' else 'about' if target_page in ['about', 'licenses', 'technical'] else 'settings']
+            if variant:
+                command += ['--variant', variant]
             if page.endswith('-bottom'):
                 command += ['--scroll-bottom']
             if page == 'technical':
@@ -137,6 +150,11 @@ h1{font-size:28px}p{line-height:1.6;max-width:900px}.grid{display:grid;grid-temp
 article{background:white;border:1px solid #ddd;border-radius:12px;padding:16px}h2{font-size:14px;font-weight:500}img{width:100%;display:block}
 </style><h1>OpenConnect for Mac · Демо 0.4</h1>
 ''' + coverage + '''
+<p><b>Исправления ревью 30 октября:</b> названия пустых профилей и паузы; подсказка при несохранённых изменениях и конфликте;
+перевод источников пароля и кода; пример TOTP по параметрам профиля; понятный выбор User-Agent;
+прокрутка длинного окна входа; текущие маршруты и DNS не подменяются несохранённым черновиком.</p>
+<p>Добавлены ошибки кода и секрета, длинное название при входе, последующие шаги мастера и разметки,
+пустые списки и управление текущей сессией при редактировании профиля. RU — светлое оформление, EN — тёмное.</p>
 <p><a href="../capabilities-v04.html">Сверка возможностей рабочего приложения и демо</a></p>
 <p><a href="#ru-idle-connection">Подключение</a> · <a href="#ru-idle-login">Настройки входа</a> ·
 <a href="#ru-signInSSO-signin">Вход SSO</a> · <a href="#ru-signInPassword-signin">Пароль</a> ·

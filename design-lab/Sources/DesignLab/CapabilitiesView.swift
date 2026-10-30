@@ -223,7 +223,7 @@ struct CapabilitiesView: View {
                 ForEach(Array(model.profiles.enumerated()), id: \.element.id) { index, profile in
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(profile.displayName).lineLimit(1)
+                            Text(model.profileTitle(profile)).lineLimit(1).help(model.profileTitle(profile))
                             Text(profile.server).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
                         }
                         Spacer()
@@ -362,8 +362,8 @@ struct CapabilitiesView: View {
         Group {
             if model.activeID != model.selectedID {
                 Section { note("Сначала подключите выбранный профиль.", "Connect the selected profile first.") }
-            } else if model.draft?.route == .proxy {
-                Section { Text("SOCKS5 · 127.0.0.1:\(model.draft?.port ?? "11080")").textSelection(.enabled) }
+            } else if model.activeProfile?.route == .proxy {
+                Section { Text("SOCKS5 · 127.0.0.1:\(model.activeProfile?.port ?? "11080")").textSelection(.enabled) }
             } else {
                 Section {
                     Text(model.pausedID == model.selectedID ? t("Пауза: сети и DNS сняты, сессия жива", "Paused: routes and DNS removed; session alive") : t("Туннель работает", "Tunnel is running"))
@@ -375,7 +375,7 @@ struct CapabilitiesView: View {
                     }
                 }
                 Section(t("DNS-зоны", "DNS zones")) {
-                    ForEach(model.draft?.zones ?? []) { zone in
+                    ForEach(model.activeProfile?.zones ?? []) { zone in
                         Toggle("\(zone.zone) → \(zone.resolver)", isOn: runtimeBinding(zone.zone, routes: false)).disabled(model.pausedID == model.selectedID).tint(LabColor.accent)
                     }
                 }

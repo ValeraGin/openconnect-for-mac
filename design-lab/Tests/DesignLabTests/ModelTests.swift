@@ -26,6 +26,7 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         testAddressFallbackAndTOTPSetup()
         testExtendedCapabilities()
         testEightDigitTOTP()
+        testReviewStateConsistency()
         print("\(checks - failures) passed; \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -335,6 +336,47 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         model.load(.commandSource)
         model.beginSignIn()
         checkFalse(model.canOfferTOTP)
+    }
+
+    static func testReviewStateConsistency() {
+        let model = DemoModel()
+        for language in Language.allCases {
+            model.language = language
+            model.load(.missing)
+            checkEqual(model.draft?.displayName, "—")
+            checkEqual(model.profileTitle(model.draft!), language == .ru ? "Новый профиль" : "New profile")
+            model.load(.paused)
+            check(model.profileMenuTitle(model.draft!).hasSuffix(language == .ru ? " • пауза" : " • paused"))
+            model.load(.commandSource)
+            checkEqual(model.sourceTitle("command"), language == .ru ? "Команда" : "Command")
+            checkEqual(model.sourceTitle("keepassxc"), "KeePassXC")
+        }
+        model.load(.totpEight)
+        checkEqual(model.selectedDemoCode, "94287082")
+        checkEqual(model.selectedDemoCode, model.expectedCode)
+        model.load(.connected)
+        let saved = model.activeProfile
+        model.applyReviewVariant("runtime-edited")
+        checkEqual(model.activeProfile, saved)
+        checkEqual(model.runtimeRoutes, ["10.20.0.0/16", "192.168.50.0/24"])
+        model.togglePause()
+        checkEqual(model.pausedID, model.selectedID)
+        model.load(.idle)
+        model.conflict = true
+        checkFalse(model.canStartConnection)
+        model.load(.credentialCode)
+        model.applyReviewVariant("secret-error")
+        check(model.authError)
+        model.load(.signInCode)
+        model.applyReviewVariant("code-error")
+        check(model.authError)
+        checkNil(model.activeID)
+        model.load(.rulesLearn)
+        model.applyReviewVariant("second-step")
+        checkEqual(model.learningStep, 1)
+        model.applyReviewVariant("mapped")
+        check(model.dirty)
+        checkEqual(model.detail, .rules)
     }
 
 }

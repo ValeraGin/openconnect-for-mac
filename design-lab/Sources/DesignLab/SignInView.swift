@@ -3,7 +3,7 @@ import SwiftUI
 struct SignInView: View {
     @ObservedObject var model: DemoModel
     private func t(_ ru: String, _ en: String) -> String { model.t(ru, en) }
-    private var profileName: String { model.authProfile?.displayName ?? t("Профиль", "Profile") }
+    private var profileName: String { model.authProfile.map(model.profileTitle) ?? t("Профиль", "Profile") }
     private var color: Color {
         if model.authStage == .success { return LabColor.success }
         if model.authStage == .expired { return LabColor.warning }
@@ -39,14 +39,19 @@ struct SignInView: View {
                     .foregroundStyle(LabColor.accent).padding(.horizontal, 8).padding(.vertical, 4)
                     .background(LabColor.accent.opacity(0.1), in: Capsule())
             }.padding(.bottom, 28)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
             Lucide(name: icon, size: 28).foregroundStyle(color)
                 .frame(width: 54, height: 54).background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
                 .padding(.bottom, 16)
-            Text(title).font(.system(size: 22, weight: .semibold)).lineLimit(2).padding(.bottom, 6)
+            Text(title).font(.system(size: 22, weight: .semibold)).lineLimit(2).help(title).padding(.bottom, 6)
             Text(model.authProfile.flatMap { URL(string: $0.server)?.host } ?? "vpn.example.com")
-                .font(.system(size: 12)).foregroundStyle(.secondary).padding(.bottom, 22)
+                .font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                .help(model.authProfile?.server ?? "").padding(.bottom, 22)
             content
-            Spacer(minLength: 12)
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(.bottom, 4)
+            }
+            .padding(.bottom, 12)
             if !model.authStage.isCredential && ![.success, .rememberCode].contains(model.authStage) {
                 HStack(spacing: 6) {
                     step(t("Вход", "Sign-in"), done: model.authStage == .code || model.authStage == .expired)
