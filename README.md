@@ -118,10 +118,15 @@ directories, and it only touches what it created itself. See
   The profile editor keeps network, proxy and advanced sign-in options under **Advanced**.
   Settings hold the profile editor, notification
   settings and diagnostics with logs. **Add a new profile…** starts with a blank address,
-  optional username, traffic mode and DNS zones, then checks system readiness and
+  optional username and tunnel/SOCKS mode, then checks system readiness and
   opens real sign-in. Prepared systems skip installation. Names come from the address;
   existing files are preserved by choosing a unique file name. After connecting,
-  you can optionally check a work resource.
+  the assistant offers gateway-supplied subnets and DNS for review. Apply saves the
+  selected additions and applies them to that same live session; Skip retains existing
+  settings. Existing entries and disabled networks are preserved. All-IPv4 routing
+  requires an explicit choice, and DNS without a domain is never made global. A changed
+  session or externally edited profile invalidates confirmation. You can then check
+  a work resource.
 
 ![Connection window](assets/connection.png)
 

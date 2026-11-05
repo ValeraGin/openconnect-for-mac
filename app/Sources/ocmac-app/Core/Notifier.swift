@@ -50,6 +50,8 @@ enum Notifier {
         // Раз в минуту: разрешение могли дать или снять в настройках, файл
         // токена — удалить; без этого уведомления молча переставали приходить.
         Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in refreshAllowed() }
+        // Quiet update/restart must not present a permission prompt.
+        if CommandLine.arguments.contains("--background-start") { return }
         center.requestAuthorization(options: [.alert, .sound]) { granted, error in
             AppLog.write("уведомления: " + (granted ? "разрешены" : "не разрешены")
                          + (error.map { " (\($0.localizedDescription))" } ?? ""))

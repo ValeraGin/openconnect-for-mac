@@ -72,6 +72,9 @@ struct Status: Equatable {
     var since: Date?
     var gateway = ""
     var dns: [String] = []
+    var gatewayRoutes: [String] = []
+    var gatewayDomain = ""
+    var gatewaySession = ""
     var url = ""
     var mode = ""
     var foreign = false
@@ -140,6 +143,9 @@ struct Status: Equatable {
         s.since = date(w.since)
         s.gateway = w.gateway ?? ""
         s.dns = w.dns ?? []
+        s.gatewayRoutes = w.gateway_routes ?? []
+        s.gatewayDomain = w.gateway_domain ?? ""
+        s.gatewaySession = w.gateway_session ?? ""
         s.url = w.url ?? ""
         s.mode = w.mode ?? ""
         s.profileMode = (w.profile_mode?.isEmpty == false) ? w.profile_mode! : "tunnel"
@@ -191,6 +197,9 @@ struct Status: Equatable {
         var since: Int?
         var gateway: String?
         var dns: [String]?
+        var gateway_routes: [String]?
+        var gateway_domain: String?
+        var gateway_session: String?
         var url: String?
         var mode: String?
         var profile_mode: String?

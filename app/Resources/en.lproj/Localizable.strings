@@ -316,7 +316,6 @@
 "Профиль" = "Profile";
 "Проверяю…" = "Checking…";
 "Продолжить" = "Continue";
-"Сохранить и продолжить" = "Save and continue";
 "Готово" = "Done";
 "не получилось:" = "did not work:";
 
@@ -497,10 +496,8 @@
 "Выполните команду в Терминале. Для установки скрипта понадобится пароль администратора Mac." = "Run this command in Terminal. Installing the script requires your Mac administrator password.";
 "Проверить готовность" = "Check readiness";
 "VPN подключён" = "VPN connected";
-"Проверяю доступ…" = "Checking access…";
 "Рабочий ресурс отвечает" = "The work resource responds";
 "Ресурс не отвечает. Откройте диагностику, чтобы проверить сети и DNS." = "The resource does not respond. Open diagnostics to check networks and DNS.";
-"Открыть диагностику" = "Open diagnostics";
 "Проверить доступ" = "Check access";
 
 "Открыть профиль OpenConnect for Mac" = "Open an OpenConnect for Mac profile";
@@ -551,28 +548,45 @@
 "Запустить мастер заново…" = "Run setup assistant again…";
 "Добавить новый профиль…" = "Add a new profile…";
 "Завершить настройку…" = "Finish setup…";
-"От профиля до первого подключения." = "From a profile to your first connection.";
 "Система" = "System";
 "Закрыть" = "Close";
 "Адрес VPN" = "VPN address";
 "Имя профиля подставим из адреса. Пароль и код вводятся при подключении." = "The address becomes the profile name. Enter your password and code when connecting.";
-"Трафик" = "Traffic";
-"Выбранные сети" = "Selected networks";
-"Весь IPv4-трафик" = "All IPv4 traffic";
 "Только SOCKS-прокси" = "SOCKS proxy only";
-"Подсети VPN · по одной в строке" = "VPN subnets · one per line";
-"Укажите рабочие подсети или выберите весь IPv4-трафик. Без маршрутов рабочие ресурсы недоступны." = "Enter work subnets or select all IPv4 traffic. Work resources need routes through the VPN.";
-"Интернет пойдёт через VPN. Шлюз должен разрешать выход наружу." = "Internet traffic will use the VPN. The gateway must allow internet access.";
-"Приложения нужно настроить на SOCKS 127.0.0.1:%@." = "Configure apps to use SOCKS at 127.0.0.1:%@.";
 "Домен" = "Domain";
 "DNS-сервер" = "DNS server";
-"Домен организации и DNS-сервер: vpn — адрес, полученный от шлюза." = "Organization domain and DNS server: vpn uses the address supplied by the gateway.";
 "Открыть готовый профиль…" = "Open an existing profile…";
 "Система готова" = "System ready";
 "Подготовьте систему" = "Prepare the system";
 "Для этого профиля нужна системная подготовка. Выполните команду в Терминале, затем проверьте готовность." = "This profile needs system preparation. Run the command in Terminal, then check readiness.";
 "macOS запросит пароль администратора. Для SOCKS без CSD установка помощника не нужна." = "macOS will ask for an administrator password. SOCKS without CSD needs no helper installation.";
-"Войдите в окне своей организации. После входа можно проверить рабочий ресурс." = "Sign in through your organization’s window, then check a work resource.";
 "Подключиться…" = "Connect…";
 "Рабочий ресурс" = "Work resource";
 "Рабочий ресурс · необязательно" = "Work resource · optional";
+
+// Server network suggestions
+"Клиент не передал данные сессии. Обновите клиент и подключитесь заново." = "The client supplied no session identity. Update the client and reconnect.";
+"VPN-сессия изменилась. Получите настройки сервера заново." = "The VPN session changed. Fetch server settings again.";
+"Настройки сохранены, но применены не полностью. Проверьте соединение и повторите." = "Settings were saved but not fully applied. Check the connection and retry.";
+"После входа · Сеть" = "After sign-in · Network";
+"Настройка подключения" = "Set up connection";
+"Не применять" = "Skip";
+"Применить" = "Apply";
+"VPN-туннель" = "VPN tunnel";
+"Порт SOCKS" = "SOCKS port";
+"Подсети и DNS предложим после входа, когда сервер передаст настройки." = "Subnets and DNS will be offered after sign-in, when the server supplies them.";
+"Что применить после подключения?" = "What should be applied after connecting?";
+"Выберите, что добавить из ответа сервера. Существующие настройки профиля сохранятся." = "Choose what to add from the server response. Existing profile settings will be retained.";
+"Весь IPv4-трафик через VPN" = "All IPv4 traffic through VPN";
+"Подсети" = "Subnets";
+"Не предложены" = "None supplied";
+"DNS сервера: %@" = "Server DNS: %@";
+"Сервер предложил широкие маршруты. Весь трафик включается только вашим выбором." = "The server offered broad routes. Routing all traffic requires your explicit choice.";
+"Новых подсетей и DNS-зон нет. Можно добавить вручную или пропустить." = "No new subnets or DNS zones. Add them manually or skip.";
+"Получить настройки сервера" = "Fetch server settings";
+"Войдите в окне своей организации. После входа появится выбор подсетей и DNS от сервера." = "Sign in through your organization’s window. Then choose subnets and DNS supplied by the server.";
+"Подсети VPN" = "VPN subnets";
+"Это предложения. Они применятся после подтверждения в мастере." = "These are suggestions. They will be applied after confirmation in the assistant.";
+"Подсеть" = "Subnet";
+"Добавить подсеть" = "Add subnet";
+"Исправьте значения перед сохранением." = "Correct the values before saving.";

@@ -67,6 +67,51 @@ extension SelfTest {
         proxy.saveAndContinue(); wait(proxy)
         t.check("setup SOCKS skips tunnel helper", proxy.step == .verify && !proxy.includesSystem)
         t.check("setup address label preserves port and group", SetupFlow.addressName("https://vpn.example.com:444/group") == "vpn.example.com:444/group")
+        var live = Status()
+        live.state = .connected; live.profile = existing.fileName; live.tundev = "utun999"
+        live.gatewaySession = "123 456"; live.since = Date(timeIntervalSince1970: 123)
+        live.gatewayRoutes = ["10.0.0.0/8", "10.20.0.0/16", "10.20.0.0/16", "0.0.0.0/0", "bad"]
+        live.dns = ["10.20.0.53"]; live.gatewayDomain = "corp.example.com"
+        var applies = 0
+        let networks = SetupFlow(readiness: { _ in (ProfileSystemState(required: false, ready: true), true) }, connect: { _ in },
+                                 status: { live }, apply: { profile, session, digest in
+            applies += 1
+            t.check("setup applies exact session and file digest", profile == existing.fileName && session == "123 456" && digest.count == 64)
+            return .ok("")
+        })
+        networks.start(profile: existing.fileName)
+        let originalProfile = ProfileStore.read(existing.fileName)
+        var other = live; other.profile = "unrelated"
+        networks.review(other)
+        t.check("setup ignores another profile's suggestions", networks.step == .profile)
+        networks.review(live)
+        t.check("setup filters invalid, duplicate, existing and default routes", networks.proposedRoutes == ["10.20.0.0/16"] && networks.offeredFullTunnel && !networks.fullTunnel)
+        t.check("setup gateway DNS uses vpn resolver", networks.proposedZones.first?.resolver == "vpn")
+        t.check("setup offers do not write or apply", ProfileStore.read(existing.fileName) == originalProfile && applies == 0)
+        networks.skipNetworks()
+        t.check("setup skip leaves profile and runtime untouched", ProfileStore.read(existing.fileName) == originalProfile && applies == 0)
+        networks.review(live); networks.useDNS = false
+        networks.applyNetworks(); wait(networks)
+        t.check("setup saves approved routes and applies to live session", applies == 1 && ProfileStore.load(existing.fileName)?.routeNets == ["10.0.0.0/8", "10.20.0.0/16"])
+        t.check("setup unchecked DNS and unknown keys preserved", ProfileStore.load(existing.fileName)?.zones.isEmpty == true && ProfileStore.load(existing.fileName)?.extras.first?.key == "Keep")
+        networks.review(live); networks.useRoutes = false
+        networks.applyNetworks(); wait(networks)
+        t.check("setup selected DNS saves domain and gateway resolver", applies == 2 && ProfileStore.load(existing.fileName)?.zones.first?.resolver == "vpn")
+        networks.review(live)
+        t.check("setup existing DNS is not proposed again", networks.proposedZones.isEmpty)
+        let beforeStale = ProfileStore.read(existing.fileName)
+        live.gatewaySession = "new session"; networks.fullTunnel = true
+        networks.applyNetworks(); wait(networks)
+        t.check("setup stale session cannot save or apply", applies == 2 && ProfileStore.read(existing.fileName) == beforeStale && networks.note != nil)
+        networks.review(live)
+        let external = beforeStale! + "\n# changed during server review\n"
+        try? external.write(toFile: ProfileStore.path(existing.fileName), atomically: true, encoding: .utf8)
+        networks.applyNetworks(); wait(networks)
+        t.check("setup review detects concurrent profile edit", applies == 2 && ProfileStore.read(existing.fileName) == external)
+        live.gatewayDomain = ""; live.gatewayRoutes = []; networks.review(live)
+        t.check("setup does not infer DNS domain from VPN address", networks.proposedZones.isEmpty && networks.serverDNS == ["10.20.0.53"])
+        let parsed = Status.parse(json: "{\"gateway_routes\":[\"10.20.0.0/16\"],\"gateway_domain\":\"corp.example.com\",\"gateway_session\":\"123 456\"}")
+        t.check("setup status wire carries real gateway suggestions", parsed?.gatewayRoutes == ["10.20.0.0/16"] && parsed?.gatewayDomain == "corp.example.com" && parsed?.gatewaySession == "123 456")
         t.check("setup initial config is not selected implicitly on restart", { flow.start(); return flow.doc.url.isEmpty && flow.savedID == nil }())
     }
 }

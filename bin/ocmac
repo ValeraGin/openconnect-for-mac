@@ -2455,6 +2455,11 @@ cmd_status() {
         [ -n "$woke" ] && printf 'woke_after_connect=%s\n' "$woke"
         printf 'state=%s\nprofile=%s\ntundev=%s\nip=%s\nsince=%s\ngateway=%s\ndns=%s\nurl=%s\nmode=%s\nforeign=%s\nsupervisor=%s\niface=%s\n' \
             "$st" "$prof" "$dev" "$ip" "$since" "$gw" "$dns" "$url" "$mode" "$foreign" "$(sup_alive && echo 1 || echo 0)" "$(active_iface)"
+        # Gateway suggestions are distinct from the profile's applied configuration.
+        if [ "$kind" != proxy ] && [ "$st" = connected ]; then
+            printf 'gateway_routes=%s\ngateway_domain=%s\ngateway_session=%s\n' \
+                "$(env_get GW_SPLIT_INC)" "$(env_get DEF_DOMAIN)" "$(head -1 "$TUN_STARTED" 2>/dev/null || true)"
+        fi
         [ -z "$strays" ] || printf 'strays=%s\n' "$strays"
         if [ "$kind" = proxy ]; then
             # Маршрутов и зон в этом режиме нет — не показываем вовсе, а не
@@ -2537,6 +2542,44 @@ cmd_status() {
     # resume — они зовут status в конце, а приложение видело «не получилось».
     return 0
 }
+
+# Apply the explicitly saved setup selection only to the reviewed live session.
+# Recheck before every helper operation, including after reading the profile.
+setup_session_matches() {
+    [ -n "$2" ] && [ "$(cat "$DESIRED" 2>/dev/null)" = "$1" ] &&
+    [ "$(head -1 "$TUN_STARTED" 2>/dev/null)" = "$2" ] &&
+    [ "$(tun_state)" = connected ] && [ "$(session_kind)" != proxy ] &&
+    ! connect_in_progress
+}
+cmd_setup_apply() (
+    local profile="${1:-}" session="${2:-}" digest="${3:-}"
+    valid_name_soft "$profile" || die "invalid setup profile"
+    setup_session_matches "$profile" "$session" || die "VPN session changed; reopen network suggestions"
+    local file="$PROFILE_DIR/$profile.ocmac"
+    [ -n "$digest" ] && [ "$(shasum -a 256 "$file" | awk '{print $1}')" = "$digest" ] || die "Profile changed; reopen network suggestions"
+    local snapshot; snapshot=$(mktemp)
+    trap 'rm -f "$snapshot"' EXIT
+    chmod 600 "$snapshot"
+    cp "$file" "$snapshot"
+    [ "$(shasum -a 256 "$snapshot" | awk '{print $1}')" = "$digest" ] || die "Profile changed; reopen network suggestions"
+    load_profile_file "$snapshot" "$profile"
+    setup_unchanged() {
+        setup_session_matches "$profile" "$session" &&
+        [ "$(shasum -a 256 "$file" | awk '{print $1}')" = "$digest" ]
+    }
+    local net zone dns port
+    while read -r net; do
+        [ -n "$net" ] || continue
+        setup_unchanged || die "VPN session changed; settings saved but not fully applied"
+        priv route-add "$net"
+    done <<< "$(active_networks)"
+    while read -r zone dns port; do
+        [ -n "$zone" ] || continue
+        setup_unchanged || die "VPN session changed; settings saved but not fully applied"
+        priv zone-add "$zone" "$dns" "${port:-53}"
+    done <<< "$(active_zones)"
+    setup_unchanged || die "VPN session changed; verify settings on the new connection"
+)
 
 # ---------------------------------------------------------------- routes ----
 cmd_routes() {
@@ -4057,6 +4100,8 @@ ocmac — OpenConnect для macOS: SSO, split DNS, split tunneling, супер�
   ocmac routes [status]               состояние (то же, что ocmac status)
   ocmac routes on|off|toggle <CIDR>   сеть в туннель на лету (add|del — то же);
                                       apply — все включённые; clear — снять все
+  ocmac setup-apply <профиль> <сессия> <sha256>
+                                    применить подтверждённые сети к той же сессии
   ocmac dns status|apply|clear        зоны /etc/resolver; on|off|toggle <зона>
   ocmac dns init <файл> <DNS|vpn>     создать zones.conf из списка доменов
   ocmac secret set-password|set-totp|status|code [профиль]   Keychain; code — текущий код
@@ -4145,6 +4190,8 @@ ocmac — OpenConnect for macOS: SSO, split DNS, split tunneling, a supervisor.
   ocmac routes [status]               state (same as ocmac status)
   ocmac routes on|off|toggle <CIDR>   a network into the tunnel on the fly (add|del — same);
                                       apply — all enabled; clear — remove all
+  ocmac setup-apply <profile> <session> <sha256>
+                                    apply approved networks to the same session
   ocmac dns status|apply|clear        /etc/resolver zones; on|off|toggle <zone>
   ocmac dns init <file> <DNS|vpn>     create zones.conf from a list of domains
   ocmac secret set-password|set-totp|status|code [profile]   Keychain; code — the current code
@@ -4211,6 +4258,7 @@ case "${1:-}" in
     profiles)   shift; cmd_profiles "$@" ;;
     profile-check) shift; cmd_profile_check "$@" ;;
     state)      shift; cmd_state "${1:-}" ;;
+    setup-apply) shift; cmd_setup_apply "$@" ;;
     routes)     shift; cmd_routes "$@" ;;
     dns)        shift; cmd_dns "$@" ;;
     secret)     shift; cmd_secret "$@" ;;
