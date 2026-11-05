@@ -28,7 +28,7 @@ def main():
             for state in ('empty', 'long', 'invalid'):
                 for layout in ('native', 'library'):
                     cases.append((lang, theme, layout, state))
-        for state in ('network', 'network-empty', 'network-error', 'full', 'proxy', 'system', 'verify', 'connected', 'routes', 'routes-many', 'routes-error', 'dns', 'dns-many'):
+        for state in ('signin', 'server-empty', 'server-dns-only', 'server-no-domain', 'server-existing', 'server-default', 'server-skipped', 'network', 'network-empty', 'network-error', 'full', 'proxy', 'system', 'verify', 'connected', 'routes', 'routes-many', 'routes-error', 'dns', 'dns-many'):
             cases.append((lang, 'light' if lang == 'ru' else 'dark', 'native', state))
     cards = []
     for lang, theme, layout, state in cases:
@@ -69,7 +69,7 @@ def main():
 <style>body{font:15px -apple-system,sans-serif;color:#252528;background:#f2f2f4;max-width:1320px;margin:32px auto;padding:0 24px}p{max-width:950px;line-height:1.6}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}article{background:white;border:1px solid #ddd;border-radius:10px;padding:16px}h2{font-size:13px}img{width:100%;display:block}a{color:#0066cc}</style>
 <h1>Компактный мастер: SwiftUI + AppKit / Settings 3.0</h1>
 <p>Одинаковые поля, данные и размер окна 560 × 420. Сравниваются SwiftUI Grid с AppKit-полями и реальные Settings.Container / Settings.Section версии 3.0.0. Это сравнение компоновки формы; контроллер окна SettingsWindowController здесь не используется.</p>
-<p><b>Основные шаги без прокрутки.</b> Сеть вынесена на отдельный шаг. Подсети и DNS открываются кнопками «Изменить…» в диалоге 520 × 360; прокручивается только список, действия всегда видны. Отмена отбрасывает правки списка.</p>
+<p><b>Основные шаги без прокрутки.</b> После входа показываются предложения сервера: подсети и DNS можно выбрать, изменить или пропустить. До подтверждения они не применяются. Подсети и DNS открываются кнопками «Изменить…» в диалоге 520 × 360; прокручивается только список, действия всегда видны. Отмена отбрасывает правки списка.</p>
 <p>Кадры настоящих окон на встроенном экране, без перехвата фокуса и мыши. Контролы неактивны: активные цвета и белёсые края требуют отдельной проверки. Подключение, установка и доступ в этом прототипе имитируются.</p>
 <p><a href="#ru-light-native-empty">Стандартный вариант</a> · <a href="#ru-light-library-empty">Settings</a> · <a href="#ru-light-native-network">Сеть</a> · <a href="#ru-light-native-dns">DNS</a></p>
 ''' + f'<p>Кадры текущей сборки: {len(cards)} / {len(cases)}.</p><div class="grid">' + ''.join(cards) + '</div></html>')

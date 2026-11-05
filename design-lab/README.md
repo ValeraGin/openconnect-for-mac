@@ -142,19 +142,42 @@ under About → Licenses. This compares form layout only, not SettingsWindowCont
 The layout selector preserves entered values. RU/EN and light/dark are selectable.
 The production app and VPN engine are not affected by this prototype.
 
-Connection, Network, optional System, and Verify are separate fixed-height steps;
+Connection, optional System, simulated Sign-in, server suggestions, and Verify are separate fixed-height steps;
 none uses a scroll view. Route/DNS counts have explicit Edit buttons that open
-520 × 360 dialogs. Only the lists scroll. Save validates a working copy; Cancel
-leaves the original list intact. Selected-network mode requires at least one
-subnet before continuing (a stricter proposed UX than production's warning).
+520 × 360 dialogs. Only the lists scroll. Save validates a working copy and updates the proposal draft; Cancel
+leaves the draft intact. Applied values change only on Apply selected. Empty
+server suggestions can be skipped, with manual entry available.
 All preparation, connection and access actions are clearly simulated.
 
 ```sh
 python3 design-lab/compact-review.py --capture-passive --resume
 ```
 
-The comparison gallery is `.local/compact-design-review/index.html`. Its 50 states
+The comparison gallery is `.local/compact-design-review/index.html`. Its 64 states
 include both layouts in both languages and both themes, long/invalid inputs,
 network modes, missing helper, verification and route/DNS editors with large lists.
 Controls remain inactive for focus-preserving capture; these images do not settle
 the reported corner highlights in active windows.
+
+Server suggestions revision (2026-11-05): connect/sign-in precedes network choices.
+The demo receives a synthetic gateway response only after simulated successful
+sign-in. It prefills draft subnets and a DNS zone with resolver `vpn` when the
+gateway supplied both an IPv4 DNS server and a domain. DNS without a domain is
+shown as information, not silently assigned to all domains. Checkboxes select
+subnets and DNS separately; Edit removes individual entries or adds manual ones.
+Apply selected commits the checked drafts; Skip retains previous settings.
+Existing entries are retained; an existing DNS resolver/port wins for the same
+case-insensitive domain. Invalid/duplicate routes are filtered. A server-proposed
+/0 route never silently enables full tunneling; the user must select all IPv4
+traffic explicitly. SOCKS chooses port before sign-in and skips system network
+suggestions. Review includes no settings, DNS-only, missing domain, existing
+settings, default-route offer and skipped suggestions in RU/EN.
+
+Production evidence: `libexec/ocmac-helper` `vpnc_connect` records `GW_SPLIT_INC`,
+`DNS` and `DEF_DOMAIN` in `tunnel.env` before applying the profile's wanted lists.
+`bin/ocmac` status and `app/Sources/ocmac-app/Core/Status.swift` currently expose
+DNS but not gateway subnet suggestions or the default domain. This prototype
+adds no production integration. A future integration must expose those fields,
+bind them to the just-connected session/profile, and obtain consent before
+saving/applying suggestions. It must not infer a DNS domain from the VPN URL or
+replace existing profile routing/DNS when a new gateway response arrives.
