@@ -27,6 +27,7 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         testExtendedCapabilities()
         testEightDigitTOTP()
         testReviewStateConsistency()
+        testSetupFlow()
         print("\(checks - failures) passed; \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -311,7 +312,7 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         check(model.canStartConnection)
         model.load(.empty)
         model.navigate(.setup)
-        checkNil(model.draft)
+        checkEqual(model.draft?.server, "")
         checkEqual(model.page, .general)
     }
     static func testEightDigitTOTP() {
@@ -377,6 +378,75 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         model.applyReviewVariant("mapped")
         check(model.dirty)
         checkEqual(model.detail, .rules)
+    }
+
+    static func testSetupFlow() {
+        let model = DemoModel()
+        model.load(.empty)
+        model.startSetup()
+        checkEqual(model.setupStep, 0)
+        checkEqual(model.detail, .setup)
+        model.advanceSetup()
+        checkEqual(model.setupStep, 0)
+        check(model.showValidation)
+        model.draft?.server = "vpn.example.com"
+        model.advanceSetup()
+        checkEqual(model.setupStep, 2)
+        checkFalse(model.dirty)
+        checkFalse(model.setupNeedsSystemStep)
+        model.setupResource = "https://intranet.example.com"
+        model.checkSetupAccess()
+        checkFalse(model.accessChecked)
+        model.beginSignIn(); model.authUsername = "demo"; model.continueSSO()
+        model.authPassword = "demo"; model.submitPassword()
+        model.authCode = model.expectedCode; model.submitCode()
+        checkEqual(model.selectedLink, .connected)
+        model.checkSetupAccess()
+        check(model.accessChecked)
+        model.setupResource = "file:///tmp/test"
+        model.checkSetupAccess()
+        checkFalse(model.accessChecked)
+        model.setupResource = "https://intranet.example.com"
+        model.togglePause()
+        checkFalse(model.canCheckSetupAccess)
+        model.closeSetup()
+        checkEqual(model.page, .connection)
+        checkNil(model.detail)
+        model.load(.helperMissing)
+        model.page = .connection
+        model.startSetup(resume: true)
+        checkEqual(model.setupStep, 1)
+        model.advanceSetup()
+        checkEqual(model.setupStep, 1)
+        model.helperReady = true
+        model.advanceSetup()
+        checkEqual(model.setupStep, 2)
+        model.backSetup()
+        checkEqual(model.setupStep, 1)
+        model.backSetup()
+        checkEqual(model.setupStep, 0)
+        model.helperReady = false
+        model.draft?.route = .proxy
+        model.advanceSetup()
+        checkEqual(model.setupStep, 2)
+        checkFalse(model.setupNeedsSystemStep)
+        model.backSetup()
+        checkEqual(model.setupStep, 0)
+        model.load(.unsaved)
+        let draft = model.draft
+        model.startSetup(resume: true)
+        checkEqual(model.setupStep, 0)
+        checkEqual(model.draft, draft)
+        model.load(.diskConflict)
+        model.startSetup()
+        model.advanceSetup()
+        checkEqual(model.setupStep, 0)
+        check(model.confirmOverwrite)
+        model.load(.idle)
+        model.page = .general
+        model.startSetup()
+        model.closeSetup()
+        checkEqual(model.page, .general)
     }
 
 }

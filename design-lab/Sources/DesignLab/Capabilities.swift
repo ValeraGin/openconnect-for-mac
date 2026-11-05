@@ -64,7 +64,44 @@ enum Detail: String, CaseIterable {
 }
 
 extension DemoModel {
-    func navigate(_ destination: Detail) { page = destination.page; detail = destination; notice = "" }
+    func navigate(_ destination: Detail) {
+        if destination == .setup { startSetup(); return }
+        page = destination.page; detail = destination; notice = ""
+    }
+    func startSetup(resume: Bool = false) {
+        setupReturnPage = page
+        if draft == nil { add() }
+        setupNeedsSystemStep = !helperReady && draft?.route != .proxy
+        setupStep = resume && valid && !dirty && !conflict ? (setupNeedsSystemStep ? 1 : 2) : 0
+        accessChecked = false; setupResource = ""; notice = ""
+        page = .general; detail = .setup
+    }
+    func closeSetup() { page = setupReturnPage; detail = nil; notice = "" }
+    func advanceSetup() {
+        switch setupStep {
+        case 0:
+            guard save() else { return }
+            accessChecked = false
+            setupNeedsSystemStep = !helperReady && draft?.route != .proxy
+            setupStep = setupNeedsSystemStep ? 1 : 2
+        case 1:
+            guard helperReady || draft?.route == .proxy else { return }
+            setupStep = 2
+        default: break
+        }
+    }
+    func backSetup() {
+        setupStep = setupStep == 2 && setupNeedsSystemStep ? 1 : 0
+        accessChecked = false
+    }
+    var canCheckSetupAccess: Bool {
+        guard selectedLink == .connected, canStartConnection,
+              let url = URL(string: setupResource), ["https", "http"].contains(url.scheme),
+              let host = url.host, !host.isEmpty, !setupResource.contains(where: { $0.isWhitespace }) else { return false }
+        return true
+    }
+    func checkSetupAccess() { accessChecked = canCheckSetupAccess }
+
     var activeProfile: DemoProfile? { profiles.first { $0.id == activeID } }
     var runtimeRoutes: [String] {
         guard let p = activeProfile else { return [] }

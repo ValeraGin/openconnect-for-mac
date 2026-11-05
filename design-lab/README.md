@@ -120,3 +120,16 @@ paused profiles, unsaved edits and file conflicts have explicit status text.
 Credential-source summaries are localized, and the settings TOTP example follows
 its configured digits/algorithm/period. Current-session controls read the saved
 profile rather than unsaved form edits. Native active-color review remains separate.
+
+
+Setup assistant revision (2026-11-05): the empty screen offers **Set up connection**,
+missing-helper warnings offer **Finish setup**, and Application retains a secondary
+**Run setup assistant again…** action. The first step edits the selected profile's
+address, username, sign-in method and traffic mode in place. Save and continue
+validates and saves before proceeding. The system step appears only for a tunnel
+that needs the helper; ready systems and SOCKS skip it. Back cannot bypass validation.
+The last step opens the existing sign-in window, optionally checks a sample HTTP(S)
+resource after connection, and returns to Connection when done. Closing preserves
+profile edits and returns to the originating section. Installation and network access
+remain simulated. Focused RU/EN captures cover the entry points, empty/long/invalid
+profiles, missing/ready helper, SOCKS, sign-in and successful access.

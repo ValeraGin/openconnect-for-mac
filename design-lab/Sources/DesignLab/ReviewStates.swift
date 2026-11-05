@@ -10,7 +10,11 @@ extension DemoModel {
             beginSignIn(); authStage = .success; activeID = selectedID
         case "secret-error": authSecret = "wrong"; saveCredential()
         case "code-error": authCode = "000000"; submitCode()
-        case "profile-step": setupStep = 1
+        case "profile-step": setupStep = 0
+        case "system-step": setupStep = 1; setupNeedsSystemStep = true
+        case "system-ready": setupStep = 1; setupNeedsSystemStep = true; helperReady = true
+        case "invalid-profile": draft?.server = "http://invalid.example.com"; advanceSetup()
+        case "proxy-setup": draft?.route = .proxy; advanceSetup()
         case "signin-step": setupStep = 2; setupResource = "https://intranet.example.com"
         case "access-ok": setupStep = 2; setupResource = "https://intranet.example.com"; accessChecked = true
         case "second-step": learningStep = 1; learningSelections = ["username", "password"]

@@ -63,7 +63,9 @@ def main():
             ('totpEight', 'signin'), ('keepassLocked', 'sources'), ('dnsInvalid', 'dns'), ('logsEmpty', 'logs'),
             ('long', 'signin@long-password'), ('long', 'signin@long-success'),
             ('credentialCode', 'signin@secret-error'), ('signInCode', 'signin@code-error'),
-            ('idle', 'setup@profile-step'), ('idle', 'setup@signin-step'), ('connected', 'setup@access-ok'),
+            ('idle', 'setup@profile-step'), ('empty', 'setup'), ('long', 'setup'),
+            ('helperMissing', 'setup@system-step'), ('helperMissing', 'setup@system-ready'),
+            ('helperMissing', 'setup@proxy-setup'), ('idle', 'setup@invalid-profile'), ('idle', 'setup@signin-step'), ('connected', 'setup@access-ok'),
             ('rulesLearn', 'learning@second-step'), ('rulesLearn', 'rules@mapped'),
             ('connected', 'runtime@runtime-edited'), ('idle', 'network@full-tunnel'),
             ('idle', 'dns@empty-dns'), ('totpQR', 'qrImport@text'),
@@ -142,7 +144,7 @@ def main():
             if report.get('binarySHA256') != binary_hash:
                 continue
             cards.append(f'<article id="{name}" data-language="{language}"><h2>{html.escape(name)}</h2><a href="{png.name}"><img src="{png.name}?v={binary_hash[:12]}" loading="lazy"></a></article>')
-    coverage = f'<p><b>Снимки текущей сборки: {len(cards)} из {len(cases)}.</b> В галерее только успешно проверенные кадры. Если набор неполный, продолжение съёмки доступно после разблокировки Мака.</p>'
+    coverage = f'<p><b>Снимки текущей сборки: {len(cards)} из {len(cases)}.</b> В галерее только успешно проверенные кадры. Неполный набор означает, что сняты только выбранные состояния либо съёмка ещё не завершена.</p>'
     (destination / 'index.html').write_text('''<!doctype html><html lang="ru"><meta charset="utf-8">
 <title>OpenConnect for Mac · Новый дизайн</title><style>
 body{font:15px -apple-system,BlinkMacSystemFont,sans-serif;background:#f3f3f5;color:#242428;margin:32px auto;max-width:1440px;padding:0 24px}
@@ -150,6 +152,8 @@ h1{font-size:28px}p{line-height:1.6;max-width:900px}.grid{display:grid;grid-temp
 article{background:white;border:1px solid #ddd;border-radius:12px;padding:16px}h2{font-size:14px;font-weight:500}img{width:100%;display:block}
 </style><h1>OpenConnect for Mac · Демо 0.4</h1>
 ''' + coverage + '''
+<p><b>Мастер настройки:</b> вход с пустого экрана и из предупреждения о помощнике; повторный запуск в «Приложении». Профиль → подготовка системы только при необходимости → подключение и необязательная проверка рабочего ресурса.</p>
+<p><a href="#ru-empty-connection">Первый запуск</a> · <a href="#ru-empty-setup">Новый профиль</a> · <a href="#ru-helperMissing-setup@system-step">Подготовка системы</a> · <a href="#ru-idle-setup@signin-step">Проверка</a></p>
 <p><b>Исправления ревью 30 октября:</b> названия пустых профилей и паузы; подсказка при несохранённых изменениях и конфликте;
 перевод источников пароля и кода; пример TOTP по параметрам профиля; понятный выбор User-Agent;
 прокрутка длинного окна входа; текущие маршруты и DNS не подменяются несохранённым черновиком.</p>

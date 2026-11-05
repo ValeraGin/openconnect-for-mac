@@ -262,41 +262,96 @@ struct CapabilitiesView: View {
             }
         }
     }
+    private func setupField<T>(_ key: WritableKeyPath<DemoProfile, T>, _ fallback: T) -> Binding<T> {
+        Binding(get: { model.draft?[keyPath: key] ?? fallback }, set: { model.draft?[keyPath: key] = $0 })
+    }
     private var setup: some View {
         Group {
             Section {
-                Picker(t("Шаг", "Step"), selection: $model.setupStep) {
-                    Text(t("1. Система", "1. System")).tag(0)
-                    Text(t("2. Профиль", "2. Profile")).tag(1)
-                    Text(t("3. Вход", "3. Sign-in")).tag(2)
-                }.pickerStyle(.segmented)
+                HStack(spacing: 8) {
+                    setupProgress(t("Профиль", "Profile"), step: 0)
+                    Lucide(name: "arrow-right", size: 12).foregroundStyle(.secondary)
+                    if model.setupNeedsSystemStep {
+                        setupProgress(t("Система", "System"), step: 1)
+                        Lucide(name: "arrow-right", size: 12).foregroundStyle(.secondary)
+                    }
+                    setupProgress(t("Проверка", "Verify"), step: 2)
+                }.font(.system(size: 12))
             }
             if model.setupStep == 0 {
                 Section {
-                    IconLabel(title: model.helperReady ? t("Помощник установлен", "Helper installed") : t("Нужен системный помощник", "System helper required"), icon: model.helperReady ? "circle-check" : "triangle-alert")
-                        .foregroundStyle(model.helperReady ? LabColor.success : LabColor.warning)
-                    Text("ocmac prepare && sudo ocmac install").font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
-                    note("Команда выполняется в Терминале. Для режима SOCKS помощник не нужен. В демо проверка имитируется.", "Run the command in Terminal. SOCKS mode needs no helper. This demo simulates the check.")
-                    Button(t("Повторить тестовую проверку", "Repeat sample check")) { model.helperReady = true }
-                    Button(t("Далее", "Continue")) { model.setupStep = 1 }.disabled(!model.helperReady && model.draft?.route != .proxy)
+                    LabeledContent(t("Адрес VPN", "VPN address")) {
+                        SingleLineInput(text: setupField(\.server, ""), label: t("Адрес VPN", "VPN address"), placeholder: "vpn.example.com").frame(height: 26)
+                    }
+                    LabeledContent(t("Пользователь", "Username")) {
+                        SingleLineInput(text: setupField(\.user, ""), label: t("Пользователь", "Username"), placeholder: t("Если требуется", "If required")).frame(height: 26)
+                    }
+                    Picker(t("Способ входа", "Sign-in method"), selection: setupField(\.browserLogin, true)) {
+                        Text(t("SSO в браузере", "Browser SSO")).tag(true)
+                        Text(t("Пароль и SMS", "Password and SMS")).tag(false)
+                    }
+                    Picker(t("Трафик", "Traffic"), selection: setupField(\.route, .selected)) {
+                        Text(t("Выбранные сети", "Selected networks")).tag(RouteMode.selected)
+                        Text(t("Весь IPv4-трафик", "All IPv4 traffic")).tag(RouteMode.all)
+                        Text(t("Только SOCKS-прокси", "SOCKS proxy only")).tag(RouteMode.proxy)
+                    }.onChange(of: model.draft?.route) { model.setupNeedsSystemStep = !model.helperReady && model.draft?.route != .proxy }
+                    note("Имя не обязательно: используем адрес. Сети и остальные параметры можно изменить в настройках профиля.", "The address is used as the name. Networks and other options are available in profile settings.")
+                    if model.showValidation && !model.valid {
+                        Text(t("Проверьте адрес HTTPS и параметры профиля.", "Check the HTTPS address and profile settings.")).font(.system(size: 12)).foregroundStyle(Color.red)
+                        ForEach(model.extendedIssues, id: \.self) { Text($0).font(.system(size: 11)).foregroundStyle(Color.red) }
+                    }
+                    Button(t("Сохранить и продолжить", "Save and continue")) { model.advanceSetup() }.buttonStyle(.borderedProminent)
                 }
             } else if model.setupStep == 1 {
                 Section {
-                    Text(model.draft?.displayName ?? t("Профиль не выбран", "No profile selected"))
-                    DetailLink(model: model, destination: .transfer)
-                    Button(t("Настроить вручную", "Configure manually")) { if model.draft == nil { model.add() }; model.page = .connection; model.detail = nil }
-                    Button(t("Ко входу", "Continue to sign-in")) { model.setupStep = 2 }.disabled(!model.valid)
+                    IconLabel(title: model.helperReady ? t("Система готова", "System ready") : t("Подготовьте систему", "Prepare the system"), icon: model.helperReady ? "circle-check" : "triangle-alert")
+                        .foregroundStyle(model.helperReady ? LabColor.success : LabColor.warning)
+                    if !model.helperReady {
+                        note("Для VPN-туннеля нужен системный помощник. Его установка требует прав администратора.", "A VPN tunnel needs a system helper. Installation requires administrator privileges.")
+                        Text("ocmac prepare && sudo ocmac install").font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                        note("В рабочем приложении команда выполняется в Терминале. Здесь кнопка только имитирует готовность системы.", "In production, run this command in Terminal. The button below only simulates system readiness.")
+                        Button(t("Имитировать установку", "Simulate installation")) { model.helperReady = true }
+                    }
+                    HStack {
+                        Button(t("Назад", "Back")) { model.backSetup() }
+                        Spacer()
+                        Button(t("Продолжить", "Continue")) { model.advanceSetup() }.buttonStyle(.borderedProminent).disabled(!model.helperReady)
+                    }
                 }
             } else {
                 Section {
-                    Button(t("Открыть вход", "Open sign-in")) { model.beginSignIn() }.disabled(!model.canStartConnection)
-                    SingleLineInput(text: $model.setupResource, label: t("Рабочий ресурс", "Work resource"), placeholder: "https://intranet.example.com").frame(height: 26)
-                    Button(t("Проверить тестовый доступ", "Check sample access")) { model.accessChecked = true }.disabled(model.activeID != model.selectedID || model.setupResource.isEmpty)
-                    if model.accessChecked { Text(t("Тестовый ресурс доступен", "Sample resource is reachable")).foregroundStyle(LabColor.success) }
-                    note("Соединение со шлюзом ещё не гарантирует доступ к рабочему ресурсу.", "A gateway connection does not guarantee access to work resources.")
+                    Text(model.draft.map(model.profileTitle) ?? "").lineLimit(1).truncationMode(.middle).help(model.draft?.server ?? "")
+                    if model.selectedLink == .connected {
+                        IconLabel(title: t("VPN подключён", "VPN connected"), icon: "circle-check").foregroundStyle(LabColor.success)
+                    } else {
+                        note("Сначала войдите в VPN, затем проверьте нужный рабочий адрес.", "Sign in to your VPN, then check a work address you need.")
+                        if model.selectedLink == .paused {
+                            Button(t("Возобновить подключение", "Resume connection")) { model.togglePause() }
+                        } else {
+                            Button(t("Подключиться…", "Connect…")) { model.beginSignIn() }.disabled(!model.canStartConnection)
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(t("Рабочий ресурс · необязательно", "Work resource · optional")).font(.system(size: 12))
+                        SingleLineInput(text: $model.setupResource, label: t("Рабочий ресурс", "Work resource"), placeholder: "https://intranet.example.com").frame(height: 26)
+                            .onChange(of: model.setupResource) { model.accessChecked = false }
+                    }
+                    Button(t("Проверить тестовый доступ", "Check sample access")) { model.checkSetupAccess() }.disabled(!model.canCheckSetupAccess)
+                    if model.accessChecked && model.canCheckSetupAccess { Text(t("Тестовый ресурс доступен", "Sample resource is reachable")).foregroundStyle(LabColor.success) }
+                    note("Демо имитирует подключение и доступ. Соединение со шлюзом не гарантирует доступ к рабочему ресурсу.", "This demo simulates connection and access. A gateway connection does not guarantee access to work resources.")
+                    HStack {
+                        Button(t("Назад", "Back")) { model.backSetup() }
+                        Spacer()
+                        Button(t("Готово", "Done")) { model.page = .connection; model.detail = nil }.buttonStyle(.borderedProminent).disabled(model.selectedLink != .connected)
+                    }
                 }
             }
         }
+    }
+    private func setupProgress(_ title: String, step: Int) -> some View {
+        Text(title).fontWeight(model.setupStep == step ? .semibold : .regular)
+            .foregroundStyle(model.setupStep == step ? LabColor.accent : .secondary)
+            .accessibilityAddTraits(model.setupStep == step ? .isSelected : [])
     }
     private var notifications: some View {
         Group {

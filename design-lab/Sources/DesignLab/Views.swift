@@ -15,7 +15,7 @@ struct LabView: View {
                 sidebar
                 Divider()
                 VStack(spacing: 0) {
-                    if !model.page.isGlobal { profilePicker; Divider() }
+                    if !model.page.isGlobal && model.detail != .setup { profilePicker; Divider() }
                     heading
                     if model.detail != nil {
                         CapabilitiesView(model: model)
@@ -135,10 +135,12 @@ struct LabView: View {
     private var heading: some View {
         VStack(alignment: .leading, spacing: 4) {
             if model.detail != nil {
-                Button("← " + model.title(model.page)) { model.detail = nil; model.notice = "" }.buttonStyle(.link).padding(.bottom, 4)
+                Button(model.detail == .setup ? text("Закрыть мастер", "Close assistant") : "← " + model.title(model.page)) {
+                    if model.detail == .setup { model.closeSetup() } else { model.detail = nil; model.notice = "" }
+                }.buttonStyle(.link).padding(.bottom, 4)
             }
             Text(model.detail?.title(model.language) ?? model.title(model.page)).font(.system(size: 20, weight: .semibold))
-            Text(model.detail == nil ? subtitle : text("Параметры и действия · тестовые данные", "Options and actions · sample data")).font(.system(size: 12)).foregroundStyle(.secondary)
+            Text(model.detail == .setup ? text("От профиля до первого подключения.", "From a profile to your first connection.") : model.detail == nil ? subtitle : text("Параметры и действия · тестовые данные", "Options and actions · sample data")).font(.system(size: 12)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -162,7 +164,7 @@ struct LabView: View {
             Text(text("Добавьте первый профиль", "Add your first profile")).font(.headline)
             Text(text("Нужны адрес VPN и имя пользователя.", "You’ll need a VPN address and a username."))
                 .foregroundStyle(.secondary)
-            Button(text("Добавить профиль", "Add profile")) { model.add() }
+            Button(text("Настроить подключение", "Set up connection")) { model.startSetup() }.buttonStyle(.borderedProminent)
             Button(text("Открыть профиль от коллеги…", "Open a shared profile…")) { model.navigate(.transfer) }.buttonStyle(.link)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -187,7 +189,7 @@ struct LabView: View {
                 }.padding(.vertical, 5)
                 if !model.helperReady && model.draft?.route != .proxy {
                     Text(text("Для туннеля нужен системный помощник.", "Tunnel mode needs the system helper.")).font(.system(size: 12)).foregroundStyle(LabColor.warning)
-                    DetailLink(model: model, destination: .setup)
+                    Button(text("Завершить настройку…", "Finish setup…")) { model.startSetup(resume: true) }
                 }
                 if model.scenario == .proxyWarning && model.activeID == model.selectedID {
                     IconLabel(title: text("Системный SOCKS не включён. Порт 11080 занят.", "System SOCKS is off. Port 11080 is already in use."), icon: "triangle-alert")
@@ -432,7 +434,7 @@ struct LabView: View {
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
             Section {
-                DetailLink(model: model, destination: .setup)
+                Button(text("Запустить мастер заново…", "Run setup assistant again…")) { model.startSetup() }
                 DetailLink(model: model, destination: .profiles)
                 Toggle(text("Режим разработчика", "Developer mode"), isOn: $model.developer).tint(LabColor.accent)
                 if model.developer {

@@ -108,6 +108,8 @@ final class DemoModel: ObservableObject {
     @Published var learningSelections = Set<String>()
     @Published var importTrusted = false
     @Published var setupStep = 0
+    var setupReturnPage: Page = .connection
+    @Published var setupNeedsSystemStep = false
     @Published var accessChecked = false
     @Published var setupResource = ""
     @Published var selectedImport = "branch"
@@ -278,7 +280,7 @@ final class DemoModel: ObservableObject {
         disabledRoutes = []; disabledZones = []; conflict = false; confirmOverwrite = false
         learningStep = 0; learningSelections = []; importTrusted = false
         diagnosticsIssue = false; helperReady = true; notificationsAllowed = true
-        accessChecked = false; setupStep = 0; qrSource = "screen"; qrDetected = false
+        accessChecked = false; setupStep = 0; setupNeedsSystemStep = false; qrSource = "screen"; qrDetected = false
         legacyAvailable = true
         aboutTechnical = false; keepassUnlocked = true; logFilter = ""
         authPresented = false; aboutPresented = false; aboutLicenses = false
