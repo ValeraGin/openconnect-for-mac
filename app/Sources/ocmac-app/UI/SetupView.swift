@@ -55,7 +55,7 @@ struct SetupView: View {
             Divider()
             HStack {
                 if flow.step != .profile { Button(L("Назад")) { flow.back() }.disabled(locked) }
-                Button(L("Закрыть")) { dismiss() }.disabled(locked || checkingAccess)
+                Button(L("Закрыть")) { dismiss(); WindowBridge.closeQuietSetup() }.disabled(locked || checkingAccess)
                 Spacer()
                 if flow.busy || flow.checking { ProgressView().controlSize(.small) }
                 switch flow.step {
@@ -68,7 +68,7 @@ struct SetupView: View {
                     Button(L("Применить")) { flow.applyNetworks() }.buttonStyle(.borderedProminent).disabled(locked || (!connected && !staging))
                 case .verify:
                     if store.busy != nil && !staging { Button(L("Отменить подключение")) { store.cancelCurrent() } }
-                    else if connected { Button(L("Готово")) { dismiss() }.buttonStyle(.borderedProminent).disabled(checkingAccess) }
+                    else if connected { Button(L("Готово")) { dismiss(); WindowBridge.closeQuietSetup() }.buttonStyle(.borderedProminent).disabled(checkingAccess) }
                     else { Button(L("Подключиться…")) { flow.connect() }.buttonStyle(.borderedProminent).disabled(locked) }
                 }
             }.padding(16)
