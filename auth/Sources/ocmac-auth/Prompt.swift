@@ -42,10 +42,10 @@ final class PromptDialog {
         alert.addButton(withTitle: L("Войти"))
         alert.addButton(withTitle: L("Отмена"))
         if secure {
-            field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
+            field = PromptSecureTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
             field.contentType = .password
         } else {
-            field = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 28))
+            field = PromptTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 28))
             field.font = .monospacedDigitSystemFont(ofSize: 17, weight: .regular)
             field.placeholderString = L("Код")
             field.alignment = .center
