@@ -13,6 +13,7 @@ cp -R "$HERE/Resources/Lucide" "$APP/Contents/Resources/"
 cp "$BIN/DesignLab" "$APP/Contents/MacOS/DesignLab"
 cp "$HERE/../app/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 cp "$HERE/../assets/mark.svg" "$APP/Contents/Resources/mark.svg"
+install -m 644 "$HERE/.build/checkouts/Settings/license" "$APP/Contents/Resources/Settings-LICENSE"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

@@ -28,6 +28,7 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         testEightDigitTOTP()
         testReviewStateConsistency()
         testSetupFlow()
+        testCompactSetup()
         print("\(checks - failures) passed; \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -447,6 +448,41 @@ private func checkNil<T>(_ a: T?, file: StaticString = #file, line: UInt = #line
         model.startSetup()
         model.closeSetup()
         checkEqual(model.page, .general)
+    }
+
+    static func testCompactSetup() {
+        let state = CompactSetupState()
+        state.next(); checkEqual(state.step, .connection); check(state.showError)
+        state.address = "http://vpn.example.com"; state.next(); checkEqual(state.step, .connection)
+        state.address = "vpn.example.com/group"; state.next(); checkEqual(state.step, .network)
+        state.next(); checkEqual(state.step, .network); check(state.showError)
+        state.edit(.routes)
+        state.draftRoutes = [.init(value: "10.20.0.0/16")]
+        state.cancelEditor(); check(state.routes.isEmpty)
+        state.edit(.routes); state.draftRoutes = [.init(value: "10.0.0.999/8")]
+        state.saveEditor(); check(state.editorError); checkEqual(state.editor, .routes); check(state.routes.isEmpty)
+        state.draftRoutes = [.init(value: "10.20.0.0/16")]; state.saveEditor()
+        checkNil(state.editor); checkEqual(state.routes.count, 1)
+        state.edit(.dns); state.draftZones = [.init(zone: "corp.example.com", resolver: "vpn", port: "0")]
+        state.saveEditor(); check(state.editorError); check(state.zones.isEmpty)
+        state.draftZones[0].port = "53"; state.saveEditor(); checkEqual(state.zones.count, 1)
+        state.helperReady = false; state.next(); checkEqual(state.step, .system)
+        state.next(); checkEqual(state.step, .system)
+        state.helperReady = true; state.next(); checkEqual(state.step, .verify)
+        state.back(); checkEqual(state.step, .system)
+        state.back(); checkEqual(state.step, .network)
+        state.mode = .proxy; state.port = "65536"; state.next(); checkEqual(state.step, .network)
+        state.port = "11080"; state.helperReady = false; state.next(); checkEqual(state.step, .verify)
+        checkFalse(state.includedSystem)
+        state.resource = "https://intranet.example.com"; checkFalse(state.canCheckAccess)
+        state.connected = true; check(state.canCheckAccess)
+        state.resource = "file:///tmp/test"; checkFalse(state.canCheckAccess)
+        state.sample("long"); let address = state.address
+        state.layout = .library; checkEqual(state.address, address)
+        state.sample("routes-many"); checkEqual(state.draftRoutes.count, 20); checkEqual(state.editor, .routes)
+        state.cancelEditor(); checkEqual(state.routes.count, 2)
+        state.reset(); check(state.address.isEmpty); check(state.routes.isEmpty); checkNil(state.editor)
+        checkEqual(state.layout, .library)
     }
 
 }

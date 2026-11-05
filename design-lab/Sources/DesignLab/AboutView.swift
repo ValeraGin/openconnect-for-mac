@@ -7,6 +7,10 @@ struct AboutView: View {
         guard let url = Bundle.main.resourceURL?.appendingPathComponent("Lucide/LICENSE") else { return "" }
         return (try? String(contentsOf: url)) ?? ""
     }
+    private var settingsLicense: String {
+        guard let url = Bundle.main.resourceURL?.appendingPathComponent("Settings-LICENSE") else { return "" }
+        return (try? String(contentsOf: url)) ?? ""
+    }
     var body: some View {
         VStack(spacing: 16) {
             if model.aboutLicenses {
@@ -16,7 +20,7 @@ struct AboutView: View {
                     Button(t("Назад", "Back")) { model.aboutLicenses = false }
                 }
                 ScrollView {
-                    Text("Lucide icons\n\n" + license).font(.system(size: 12))
+                    Text("Lucide icons\n\n" + license + "\n\nSettings 3.0.0\n\n" + settingsLicense).font(.system(size: 12))
                         .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else if model.aboutTechnical {

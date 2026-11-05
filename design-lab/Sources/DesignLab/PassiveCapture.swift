@@ -23,7 +23,7 @@ enum PassiveCapture {
         let surface = LabScreen(rawValue: argument("--screen") ?? "settings") ?? .settings
         let panel = Panel(contentRect: NSRect(origin: .zero, size: surface.size),
                           styleMask: [.titled, .closable, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.title = surface == .settings ? "OpenConnect for Mac — Demo" : surface == .signin
+        panel.title = [.settings, .compact, .compactEditor].contains(surface) ? "OpenConnect for Mac — Demo" : surface == .signin
             ? model.t("Вход — OpenConnect for Mac — Demo", "Sign-in — OpenConnect for Mac — Demo")
             : model.t("О приложении — OpenConnect for Mac", "About — OpenConnect for Mac")
         panel.isReleasedWhenClosed = false
@@ -70,7 +70,7 @@ enum PassiveCapture {
             "displayID": displayID(screen), "scenario": model.scenario.rawValue,
             "page": model.page.rawValue, "language": model.language.rawValue,
             "width": surface.size.width, "height": surface.size.height, "screen": surface.rawValue,
-            "syntheticData": true, "variant": argument("--variant") ?? "", "detail": model.detail?.rawValue ?? "",
+            "syntheticData": true, "layout": model.compact.layout.rawValue, "compactState": argument("--compact-state") ?? "", "variant": argument("--variant") ?? "", "detail": model.detail?.rawValue ?? "",
             "scrolledBottom": CommandLine.arguments.contains("--scroll-bottom")]
         do {
             try JSONSerialization.data(withJSONObject: metadata, options: [.prettyPrinted, .sortedKeys])

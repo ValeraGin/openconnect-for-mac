@@ -3,9 +3,11 @@ import SwiftUI
 import Combine
 
 enum LabScreen: String {
-    case settings, signin, about
+    case settings, signin, about, compact, compactEditor
     var size: NSSize {
         switch self {
+        case .compact: return NSSize(width: 560, height: 420)
+        case .compactEditor: return NSSize(width: 520, height: 360)
         case .settings: return NSSize(width: 680, height: 620)
         case .signin: return NSSize(width: 440, height: 540)
         case .about: return NSSize(width: 440, height: 540)
@@ -46,16 +48,19 @@ final class LabDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if let detail = argument("--page").flatMap(Detail.init(rawValue:)) { model.navigate(detail) }
         if passive, let variant = argument("--variant") { model.applyReviewVariant(variant) }
         model.appearance = argument("--appearance") ?? "system"
+        model.compact.layout = CompactLayout(rawValue: argument("--layout") ?? "native") ?? .native
+        model.compact.sample(argument("--compact-state") ?? "empty")
         model.showDetails = CommandLine.arguments.contains("--details")
         model.aboutTechnical = CommandLine.arguments.contains("--technical")
         model.aboutLicenses = CommandLine.arguments.contains("--licenses")
         if passive { Task { await PassiveCapture.run(model: model) }; return }
         installMenus()
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 620),
+        let screen = LabScreen(rawValue: argument("--screen") ?? "compact") ?? .compact
+        let window = NSWindow(contentRect: NSRect(origin: .zero, size: screen.size),
                               styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = "OpenConnect for Mac — Demo"
         window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: AppearanceView(model: model))
+        window.contentView = NSHostingView(rootView: AppearanceView(model: model, screen: screen))
         window.center()
         if let screen = NSScreen.screens.first(where: {
             let id = ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0
@@ -100,6 +105,12 @@ final class LabDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if sender === aboutWindow { model.aboutPresented = false }
         return true
     }
+    @objc private func openCompact() { changeScreen(.compact) }
+    @objc private func openFull() { changeScreen(.settings) }
+    private func changeScreen(_ screen: LabScreen) {
+        window?.contentView = NSHostingView(rootView: AppearanceView(model: model, screen: screen))
+        window?.setContentSize(screen.size)
+    }
     @objc private func openAbout() { model.aboutPresented = true }
     private func installMenus() {
         let menu = NSMenu()
@@ -107,6 +118,8 @@ final class LabDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let about = appMenu.addItem(withTitle: model.t("О приложении OpenConnect for Mac", "About OpenConnect for Mac"),
                                    action: #selector(openAbout), keyEquivalent: "")
         about.target = self
+        let compact = appMenu.addItem(withTitle: model.t("Компактный мастер", "Compact assistant"), action: #selector(openCompact), keyEquivalent: "1"); compact.target = self
+        let full = appMenu.addItem(withTitle: model.t("Полный макет настроек", "Full settings prototype"), action: #selector(openFull), keyEquivalent: "2"); full.target = self
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: model.t("Завершить OpenConnect for Mac", "Quit OpenConnect for Mac"),
                         action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -129,6 +142,8 @@ struct AppearanceView: View {
     var body: some View {
         Group {
             switch screen {
+            case .compact: CompactSetupView(model: model, state: model.compact)
+            case .compactEditor: CompactListEditor(model: model, state: model.compact)
             case .settings: LabView(model: model)
             case .signin: SignInView(model: model)
             case .about: AboutView(model: model)

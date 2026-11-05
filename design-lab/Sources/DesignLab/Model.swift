@@ -55,6 +55,7 @@ struct DemoProfile: Identifiable, Equatable {
 
 /// Entirely synthetic state. No production imports, CLI, keychain or network.
 final class DemoModel: ObservableObject {
+    let compact = CompactSetupState()
     @Published var language: Language = .ru
     @Published var page: Page = .connection
     @Published var scenario: Scenario = .idle
