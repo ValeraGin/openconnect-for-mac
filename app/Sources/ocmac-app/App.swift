@@ -72,7 +72,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // while an established setup keeps its quiet menu-bar launch.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             if CommandLine.arguments.contains("--setup-quiet") {
-                WindowBridge.openSetupQuietly()
+                let args = CommandLine.arguments
+                let profile = args.firstIndex(of: "--setup-profile").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }
+                WindowBridge.openSetupQuietly(profile: profile)
                 return
             }
             guard !QuickProfileFlow.shared.presented, !CommandLine.arguments.contains("--background-start") else { return }
@@ -272,6 +274,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         let size: NSSize = screenshot == "quick-profile" ? NSSize(width: 668, height: 620)
             : screenshot == "connection" || screenshot == "settings"
                 ? NSSize(width: contentSize.width + 48, height: contentSize.height + 48)
+            : screenshot == "setup-csd" ? NSSize(width: 560, height: 460)
             : screenshot == "setup" ? NSSize(width: 800, height: 660)
             : screenshot == "icons" ? NSSize(width: 980, height: 360) : NSSize(width: 1500, height: 2400)
         // Кадр README — в окне без рамки: окно с заголовком система подгоняет
@@ -300,6 +303,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             window.contentView = host
         } else if screenshot == "icons" {
             window.contentView = NSHostingView(rootView: ScreenshotIconsView())
+        } else if screenshot == "setup-csd" {
+            let flow = SetupFlow.shared
+            flow.stage(step: 2, state: "csd")
+            if args.contains("invalid") { flow.doc.csdScriptBase64 = Data("invalid script".utf8).base64EncodedString() }
+            if args.contains("path") { flow.doc.csdWrapper = "/usr/local/libexec/csd-wrapper.sh" }
+            window.contentView = NSHostingView(rootView: SetupCSDEditor(flow: flow)
+                .padding(20).background(Color(nsColor: .windowBackgroundColor)))
         } else if screenshot == "setup" {
             window.contentView = NSHostingView(rootView: SetupView()
                 .frame(width: 760, height: 620)

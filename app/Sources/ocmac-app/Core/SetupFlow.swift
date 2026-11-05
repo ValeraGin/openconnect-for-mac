@@ -144,6 +144,37 @@ final class SetupFlow: ObservableObject {
         }
     }
 
+    /// Persist only the explicitly supplied HostScan configuration. Readiness
+    /// must be checked again because an embedded script may need installation.
+    func saveCSD(wrapper: String, script: String, completion: @escaping (Bool) -> Void) {
+        guard let stamp, !busy && !checking else { completion(false); return }
+        var candidate = doc
+        candidate.csdWrapper = wrapper.trimmed
+        candidate.csdScriptBase64 = script.isEmpty ? "" : Data(script.utf8).base64EncodedString()
+        guard !candidate.csdWrapper.isEmpty || !candidate.csdScriptBase64.isEmpty else {
+            note = L("Добавьте текст скрипта или укажите путь к файлу."); completion(false); return
+        }
+        let problems = ProfileCheck.check(candidate).filter { $0.level == .error }
+        guard problems.isEmpty else { note = problems.map(\.text).joined(separator: "\n"); completion(false); return }
+        let request = generation
+        busy = true; note = nil
+        ProfileSaveService.save(candidate, expected: stamp) { outcome in
+            guard self.generation == request else { return }
+            self.busy = false
+            switch outcome {
+            case .saved:
+                self.doc = candidate; self.stamp = ProfileStore.stamp(candidate.fileName)
+                self.awaitingConnection = false
+                completion(true)
+                self.check(advance: true)
+            case .changed:
+                self.note = L("Профиль изменился. Откройте его заново, чтобы сохранить актуальные настройки.")
+                completion(false)
+            case .rejected(let why), .failed(let why): self.note = why; completion(false)
+            }
+        }
+    }
+
     nonisolated static func sameSession(_ status: Status, _ expected: Status) -> Bool {
         status.state == .connected && !status.isProxySession && !status.gatewaySession.isEmpty
             && status.profile == expected.profile && status.gatewaySession == expected.gatewaySession

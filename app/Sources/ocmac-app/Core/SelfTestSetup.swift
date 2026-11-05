@@ -62,6 +62,23 @@ extension SelfTest {
         flow.start(profile: existing.fileName)
         flow.doc.user = "changed"; flow.saveAndContinue(); wait(flow)
         t.check("setup contextual flow retains unknown keys and networks", flow.savedID == existing.fileName && flow.doc.routes == existing.routes && flow.doc.extras.first?.key == "Keep")
+        let csd = SetupFlow(readiness: { _ in (ProfileSystemState(required: true, ready: false), false) }, connect: { connections.append($0) })
+        csd.start(profile: existing.fileName)
+        var csdSaved = false
+        let beforeCSD = ProfileStore.read(existing.fileName)
+        csd.saveCSD(wrapper: "", script: "not a script") { csdSaved = $0 }; wait(csd)
+        t.check("setup rejects malformed CSD without saving", !csdSaved && ProfileStore.read(existing.fileName) == beforeCSD)
+        csd.saveCSD(wrapper: "", script: "") { csdSaved = $0 }; wait(csd)
+        t.check("setup rejects empty CSD", !csdSaved && ProfileStore.read(existing.fileName) == beforeCSD)
+        let script = "#!/bin/sh\n# synthetic setup fixture, never executed\nexit 0\n"
+        csd.saveCSD(wrapper: "", script: script) { csdSaved = $0 }; wait(csd)
+        t.check("setup saves embedded CSD to same profile", csdSaved && ProfileStore.load(existing.fileName)?.csdScriptBase64 == Data(script.utf8).base64EncodedString())
+        t.check("setup CSD preserves networks and unknown keys", csd.doc.routes == existing.routes && csd.doc.extras.first?.key == "Keep")
+        t.check("setup CSD returns to required system preparation without connecting", csd.step == .system && connections.count == 1)
+        let changedCSD = (ProfileStore.read(existing.fileName) ?? "") + "\n# external CSD edit\n"
+        try? changedCSD.write(toFile: ProfileStore.path(existing.fileName), atomically: true, encoding: .utf8)
+        csd.saveCSD(wrapper: "", script: script + "# change\n") { csdSaved = $0 }; wait(csd)
+        t.check("setup CSD never overwrites concurrent changes", !csdSaved && ProfileStore.read(existing.fileName) == changedCSD)
         let proxy = SetupFlow(readiness: { doc in (ProfileSystemState(required: false, ready: true), doc.mode == "proxy") }, connect: { connections.append($0) })
         proxy.start(); proxy.doc.url = "proxy.example.com"; proxy.doc.mode = "proxy"
         proxy.saveAndContinue(); wait(proxy)

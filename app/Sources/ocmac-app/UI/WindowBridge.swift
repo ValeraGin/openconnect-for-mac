@@ -24,13 +24,14 @@ enum WindowBridge {
 
     /// Show an interactive assistant on the built-in display without becoming key
     /// or activating the app. A user click may activate it normally afterwards.
-    static func openSetupQuietly() {
+    static func openSetupQuietly(profile: String? = nil) {
         guard let display = NSScreen.screens.first(where: {
             let id = ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0
             return CGDisplayIsBuiltin(id) != 0
         }) else { AppLog.write("quiet setup: built-in display unavailable"); return }
         guard !SetupFlow.shared.busy && !SetupFlow.shared.checking else { return }
-        SetupFlow.shared.start()
+        SetupFlow.shared.start(profile: profile)
+        if profile != nil { SetupFlow.shared.check(advance: true) }
         let window = quietSetup ?? NSWindow(contentRect: NSRect(x: 0, y: 0, width: SetupView.width, height: SetupView.height),
                                             styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = L("Мастер настройки")

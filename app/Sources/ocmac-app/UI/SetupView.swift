@@ -11,6 +11,7 @@ struct SetupView: View {
     @State private var accessChecked = false
     @State private var checkingAccess = false
     @State private var editor: NetworkEditor?
+    @State private var editingCSD = false
     enum NetworkEditor: String, Identifiable { case routes, dns; var id: String { rawValue } }
     init() {
         if CommandLine.arguments.contains("--stage") {
@@ -74,6 +75,7 @@ struct SetupView: View {
             }.padding(16)
         }.frame(width: Self.width, height: Self.height).background(Color(nsColor: .windowBackgroundColor))
         .sheet(item: $editor) { SetupNetworkEditor(kind: $0, flow: flow) }
+        .sheet(isPresented: $editingCSD) { SetupCSDEditor(flow: flow) }
         .onAppear {
             if staging {
                 let args = CommandLine.arguments
@@ -182,10 +184,22 @@ struct SetupView: View {
             } else {
                 hint(L("Войдите в окне своей организации. После входа появится выбор подсетей и DNS от сервера."))
                 if store.status.state == .connected && store.status.profile != flow.savedID { hint(L("Это подключение заменит текущее VPN-соединение.")) }
+                if needsCSD {
+                    Label(L("Сервер требует проверку устройства"), systemImage: "desktopcomputer.trianglebadge.exclamationmark")
+                        .foregroundStyle(Palette.warn)
+                    hint(L("Добавьте CSD-скрипт для этого VPN, затем повторите вход."))
+                }
+                Button(flow.doc.csdWrapper.isEmpty && flow.doc.csdScriptBase64.isEmpty
+                       ? L("Добавить CSD-скрипт…") : L("Изменить CSD-скрипт…")) { editingCSD = true }
+                    .disabled(locked)
                 if let busy = store.busy { ProgressView(busy).controlSize(.small) }
             }
-            if let note = store.actionNote, !staging { hint(note) }
+            if let note = store.actionNote, !staging, !needsCSD { hint(note) }
         }
+    }
+    private var needsCSD: Bool {
+        guard !connected else { return false }
+        return (store.actionNote ?? "").contains("HostScan") || (staging && CommandLine.arguments.contains("csd"))
     }
     private func checkAccess() {
         guard connected, !checkingAccess, let id = flow.savedID, !resource.trimmed.isEmpty else { return }
