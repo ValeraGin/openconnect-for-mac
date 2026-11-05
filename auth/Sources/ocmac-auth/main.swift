@@ -505,6 +505,7 @@ if args.cameraAccess {
 // AppKit нужно и здесь, поэтому ветка отдельная.
 if args.importCamera && args.cameraWindowShot == nil {
     let app = NSApplication.shared
+    EditingMenu.install(on: app)
     app.setActivationPolicy(.accessory)
     DispatchQueue.main.async {
         let r = QRCameraWindow(code: "", at: Date(), select: args.selectEntry).run()
@@ -648,6 +649,7 @@ if args.probe {
 if args.learnSelfTest {
     Lang.current = "ru"             // проверки сверяют русский текст
     let app = NSApplication.shared
+    EditingMenu.install(on: app)
     app.setActivationPolicy(.accessory)
     out("ocmac-auth learn-selftest")
     var check: LearnCheck?
@@ -662,6 +664,7 @@ if args.learnSelfTest {
 // тайм-аут — код 2 (как у окна входа).
 if let label = args.prompt {
     let app = NSApplication.shared
+    EditingMenu.install(on: app)
     app.setActivationPolicy(.accessory)
     DispatchQueue.main.async {
         let started = Date()
@@ -679,6 +682,7 @@ if let label = args.prompt {
 
 if let shotPath = args.promptShot {
     let app = NSApplication.shared
+    EditingMenu.install(on: app)
     app.setActivationPolicy(.accessory)
     DispatchQueue.main.async {
         let ok = PromptDialog.shot(to: shotPath)
@@ -691,6 +695,7 @@ if let shotPath = args.promptShot {
 // Снимок окна «Запомнить для следующего входа?» — вид без человека.
 if let shotPath = args.teachDialogShot {
     let app = NSApplication.shared
+    EditingMenu.install(on: app)
     app.setActivationPolicy(.accessory)
     DispatchQueue.main.async {
         let ok = TeachDialog.shot(to: shotPath)
@@ -703,6 +708,7 @@ if let shotPath = args.teachDialogShot {
 // Снимок окна камеры — вид без человека и без включения камеры.
 if let shotPath = args.cameraWindowShot {
     let app = NSApplication.shared
+    EditingMenu.install(on: app)
     app.setActivationPolicy(.accessory)
     DispatchQueue.main.async {
         let ok = QRCameraWindow.shot(to: shotPath, adding: args.importCamera)
@@ -715,6 +721,7 @@ if let shotPath = args.cameraWindowShot {
 // Пробник предзаполнения: та же страница, что у разметки, но без окна.
 if args.forgetSessions {
     let app = NSApplication.shared
+    EditingMenu.install(on: app)
     app.setActivationPolicy(.prohibited)
     DispatchQueue.main.async {
         WebAuth.forgetSessions { n in
@@ -730,6 +737,7 @@ if args.learnProbe {
         FileHandle.standardError.write(Data("ocmac-auth: --learn-probe требует --url\n".utf8)); exit(4)
     }
     let app = NSApplication.shared
+    EditingMenu.install(on: app)
     app.setActivationPolicy(.prohibited)
     var probe: LearnProbe?
     DispatchQueue.global().async {
@@ -754,6 +762,7 @@ if args.learn {
         FileHandle.standardError.write(Data("ocmac-auth: --learn требует --url\n".utf8)); exit(4)
     }
     let app = NSApplication.shared
+    EditingMenu.install(on: app)
     app.setActivationPolicy(.regular)
     var session: LearnSession?
     DispatchQueue.global().async {
@@ -789,6 +798,7 @@ guard args.url != nil else {
 }
 
 let app = NSApplication.shared
+EditingMenu.install(on: app)
 app.setActivationPolicy(.accessory)   // без иконки в Dock, пока окно не понадобилось
 
 var webAuth: WebAuth?
