@@ -148,11 +148,11 @@ struct ConnectionView: View {
     private var connectionActions: some View {
         HStack(spacing: 8) {
             if status.presentation == .missing {
-                Button(L("Настроить клиент…")) { if !demo { WindowBridge.open(WindowID.setup) } }
+                Button(L("Настроить клиент…")) { if !demo { SetupFlow.shared.show() } }
             } else if status.profiles.isEmpty && !active && store.busy == nil {
                 Button(L("Открыть профиль…")) { if !demo { QuickProfileFlow.shared.chooseFile() } }
                     .disabled(store.busy != nil)
-                Button(L("Новый профиль")) { if !demo { WindowBridge.open(WindowID.setup) } }
+                Button(L("Настроить подключение")) { if !demo { SetupFlow.shared.show() } }
                     .disabled(store.busy != nil)
             }
             if status.presentation == .paused {

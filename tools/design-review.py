@@ -125,7 +125,12 @@ def main():
 
     for lang in ('ru', 'en'):
         for step in range(3):
-            add(f'setup-{step}', lang, 'setup', 740, 560, ['--step', str(step)])
+            add(f'setup-{step}', lang, 'setup', 580, 610, ['--step', str(step)])
+        for state in ('long', 'invalid', 'all', 'proxy', 'dns'):
+            add(f'setup-profile-{state}', lang, 'setup', 580, 610, ['--step', '0', '--setup-state', state])
+        add('setup-dns-bottom', lang, 'setup', 580, 610, ['--step', '0', '--setup-state', 'dns', '--capture-scroll-bottom'])
+        add('setup-system-ready', lang, 'setup', 580, 610, ['--step', '1', '--setup-state', 'ready'])
+        add('setup-connected', lang, 'setup', 580, 610, ['--step', '2', '--setup-state', 'connected'])
         add('settings-system-wide', lang, 'settings', 1100, 820, theme='system')
 
     def render(case):

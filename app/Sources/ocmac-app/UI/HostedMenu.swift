@@ -199,7 +199,7 @@ struct MenuContent: View {
             }
             .disabled(true)
             if s.profiles.isEmpty, s.presentation != .missing {
-                Button(L("Настроить OpenConnect for Mac…")) { WindowBridge.open(WindowID.setup) }
+                Button(L("Настроить OpenConnect for Mac…")) { SetupFlow.shared.show() }
             }
         } else {
             Section(L("Профили")) {
@@ -421,6 +421,7 @@ struct MenuContent: View {
         }
         Button(L("Открыть OpenConnect for Mac")) { WindowBridge.open(WindowID.connection) }
             .keyboardShortcut("o")
+        Button(L("Добавить новый профиль…")) { SetupFlow.shared.show() }.disabled(store.busy != nil)
         Button(L("Настройки…")) { WindowBridge.open(WindowID.settings) }
             .keyboardShortcut(",")
         Button(L("Диагностика и журналы…")) { WindowBridge.open(WindowID.diagnostics) }

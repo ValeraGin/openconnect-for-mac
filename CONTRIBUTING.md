@@ -20,6 +20,7 @@ tools/helper-selftest.sh                       # privileged helper, dry-run with
 auth/.build/release/ocmac-auth --selftest      # TOTP, fill scope, autofill limits
 auth/.build/release/ocmac-auth --learn-selftest
 app/.build/ocmac.app/Contents/MacOS/ocmac-app --selftest
+app/.build/ocmac.app/Contents/MacOS/ocmac-app --selftest-setup # isolated profiles, no windows or VPN
 python3 tools/gateway-matrix-test.py           # local TLS gateways + real WebKit
 python3 tools/upstream-proxy-test.py            # HTTP CONNECT/SOCKS5 login + no direct fallback
 python3 tools/hostscan-sequence-test.py        # external CSD wrapper handshake

@@ -292,6 +292,7 @@ struct ProfileEditorView: View {
                 } label: { Image(systemName: "plus") }
                 .help(L("Новый профиль"))
                 Menu {
+                    Button(L("Добавить новый профиль…")) { SetupFlow.shared.show() }.disabled(dirty)
                     Button(L("Открыть профиль…")) { QuickProfileFlow.shared.chooseFile() }
                     Divider()
                     Button(L("Управление профилями…")) { showProfileList = true }
@@ -1019,6 +1020,9 @@ struct ProfileEditorView: View {
                 Text(message).font(.system(size: 11)).foregroundStyle(Palette.ok)
             }
             ProfileSetupNotice(state: systemState, checking: checkingSystem, check: checkSystem)
+            if systemState?.ready == false, let loadedName {
+                Button(L("Завершить настройку…")) { SetupFlow.shared.show(profile: loadedName) }.disabled(dirty)
+            }
             HStack(spacing: 10) {
                 if saving || checkingSystem {
                     ProgressView().controlSize(.small)

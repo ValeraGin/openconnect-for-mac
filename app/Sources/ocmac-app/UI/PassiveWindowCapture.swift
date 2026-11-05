@@ -46,7 +46,7 @@ enum PassiveWindowCapture {
         if CommandLine.arguments.contains("--dark") { NSApp.appearance = NSAppearance(named: .darkAqua) }
         let requested = ScreenshotWindowSize.content(settings: screen == "settings")
         let size = screen == "settings" ? NSSize(width: SettingsWindow.width, height: SettingsWindow.height)
-            : screen == "setup" ? NSSize(width: 740, height: 560) : requested
+            : screen == "setup" ? NSSize(width: SetupView.width, height: SetupView.height) : requested
         let panel = Panel(contentRect: NSRect(origin: display.visibleFrame.origin, size: size),
                           styleMask: [.titled, .closable, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isReleasedWhenClosed = false

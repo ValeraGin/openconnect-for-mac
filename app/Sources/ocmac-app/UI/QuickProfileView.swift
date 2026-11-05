@@ -82,7 +82,7 @@ struct QuickProfileView: View {
                         .disabled(flow.busy || flow.waitingForSetup || store.busy != nil)
                     Button(L("Все настройки…")) { WindowBridge.open(WindowID.settings) }
                 } else {
-                    Button(L("Настроить вручную…")) { WindowBridge.open(WindowID.setup) }
+                    Button(L("Настроить вручную…")) { SetupFlow.shared.show() }
                 }
                 Spacer()
                 if flow.waitingForSetup {

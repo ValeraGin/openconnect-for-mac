@@ -23,6 +23,7 @@ extension SelfTest {
         auditProfileChecks(t)
         auditProfileWorkflow(t)
         auditQuickProfile(t)
+        auditSetup(t)
         auditStatus(t)
         auditLocalization(t)
         auditProfileVerdicts(t)

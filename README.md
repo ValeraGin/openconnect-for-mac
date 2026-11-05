@@ -117,8 +117,11 @@ directories, and it only touches what it created itself. See
   window with a profile selector, connection status and Connect/Disconnect button.
   The profile editor keeps network, proxy and advanced sign-in options under **Advanced**.
   Settings hold the profile editor, notification
-  settings and diagnostics with logs; a first-run wizard walks through system
-  component → profile → first login.
+  settings and diagnostics with logs. **Add a new profile…** starts with a blank address,
+  optional username, traffic mode and DNS zones, then checks system readiness and
+  opens real sign-in. Prepared systems skip installation. Names come from the address;
+  existing files are preserved by choosing a unique file name. After connecting,
+  you can optionally check a work resource.
 
 ![Connection window](assets/connection.png)
 

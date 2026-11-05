@@ -33,8 +33,9 @@ struct OCMacApp: App {
         Window(L("Открыть профиль OpenConnect for Mac"), id: WindowID.quickProfile) { QuickProfileView() }
             .windowResizability(.contentSize)
             .handlesExternalEvents(matching: [])
-        Window(L("Первый запуск OpenConnect for Mac"), id: WindowID.setup) { SetupView() }
-            .defaultSize(width: 740, height: 560)
+        Window(L("Мастер настройки"), id: WindowID.setup) { SetupView() }
+            .defaultSize(width: SetupView.width, height: SetupView.height)
+            .windowResizability(.contentSize)
             .handlesExternalEvents(matching: [])
 
         Window(L("Журналы OpenConnect for Mac"), id: WindowID.logs) { LogsView() }
@@ -70,12 +71,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // A profile imported by install.sh should lead straight to the username,
         // while an established setup keeps its quiet menu-bar launch.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            guard !QuickProfileFlow.shared.presented else { return }
+            guard !QuickProfileFlow.shared.presented, !CommandLine.arguments.contains("--background-start") else { return }
             let files = ProfileStore.list()
             if let id = files.first(where: { ProfileStore.load($0)?.user.trimmed.isEmpty == true }) {
                 QuickProfileFlow.shared.openExisting(id)
             } else if files.isEmpty && !FileManager.default.fileExists(atPath: OCMacClient.shared.configDir + "/profiles.conf") {
-                QuickProfileFlow.shared.show()
+                SetupFlow.shared.show()
             }
         }
     }
@@ -172,6 +173,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             if let data = try? JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]),
                let text = String(data: data, encoding: .utf8) { print(text) }
             exit(report["clientAvailable"] as? Bool == true ? 0 : 1)
+        }
+        if CommandLine.arguments.contains("--selftest-setup") {
+            let tally = SelfTest.Tally(); SelfTest.auditSetup(tally); exit(tally.failures)
         }
         if CommandLine.arguments.contains("--selftest-menu") { exit(SelfTest.hostedMenu()) }
         if CommandLine.arguments.contains("--selftest") {
