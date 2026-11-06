@@ -308,7 +308,7 @@ struct ProfileEditorView: View {
                 } label: { Image(systemName: "plus") }
                 .help(L("Новый профиль"))
                 Menu {
-                    Button(L("Добавить новый профиль…")) { SetupFlow.shared.show() }.disabled(dirty)
+                    Button(L("Мастер настройки")) { SetupFlow.shared.show() }.disabled(dirty)
                     Button(L("Открыть профиль…")) { QuickProfileFlow.shared.chooseFile() }
                     Divider()
                     Button(L("Управление профилями…")) { showProfileList = true }
@@ -360,10 +360,7 @@ struct ProfileEditorView: View {
     @ViewBuilder
     private var connectControl: some View {
         HStack(spacing: 8) {
-            if let busy = store.busy {
-                ProgressView().controlSize(.small)
-                Text(busy).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
-            }
+            if store.busy != nil { ProgressView().controlSize(.small) }
             if store.busy != nil, store.cancelTitle != nil {
                 Button(L("Отменить")) { store.cancelCurrent() }
             } else if isActive {
@@ -425,29 +422,29 @@ struct ProfileEditorView: View {
         case .connection:
             NativeSection {
                 HStack(spacing: 12) {
-                    AppMark(size: 36)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(loadedName == store.status.profile ? StateLook.of(store.status).subtitle : L("Не подключён"))
-                            .fontWeight(.semibold).fixedSize(horizontal: false, vertical: true)
-                        Text(doc.name.trimmed.isEmpty ? SetupFlow.addressName(doc.url) : doc.name)
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                    }
+                    Text(store.busy ?? (loadedName == store.status.profile ? StateLook.of(store.status).subtitle : L("Не подключён")))
+                        .fontWeight(.semibold).fixedSize(horizontal: false, vertical: true)
                     Spacer()
                     connectControl
                 }
                 if isActive && [.connected, .lost, .paused].contains(store.status.presentation) && !store.status.isProxySession {
-                    Button(store.status.presentation == .paused ? L("Возобновить") : L("Приостановить")) {
-                        if store.status.presentation == .paused { store.resume() } else { store.pause() }
-                    }.disabled(store.busy != nil)
+                    HStack {
+                        Spacer()
+                        Button(store.status.presentation == .paused ? L("Возобновить") : L("Приостановить")) {
+                            if store.status.presentation == .paused { store.resume() } else { store.pause() }
+                        }.disabled(store.busy != nil)
+                    }
                 }
             }
-            NativeSection(L("Параметры профиля")) {
+            NativeSection {
                 field(L("Адрес VPN"), $doc.url, hint: "vpn.example.com/group")
                 field(L("Пользователь"), $doc.user)
             }
             if files.isEmpty {
-                Button(L("Настроить подключение")) { SetupFlow.shared.show() }.buttonStyle(.borderedProminent)
-                Button(L("Открыть профиль…")) { QuickProfileFlow.shared.chooseFile() }
+                HStack {
+                    Button(L("Настроить подключение")) { SetupFlow.shared.show() }.buttonStyle(.borderedProminent)
+                    Button(L("Открыть профиль…")) { QuickProfileFlow.shared.chooseFile() }
+                }
             }
             if dirty { Footnote(L("Сохраните изменения перед подключением.")) }
             if let otherActive { Footnote(L("Сейчас подключён другой профиль: %@", otherActive)) }
@@ -479,13 +476,11 @@ struct ProfileEditorView: View {
                     field(L("Порт"), $doc.proxyPort, hint: "11080")
                     Toggle(L("Включать системный SOCKS"), isOn: $doc.systemProxy).onChange(of: doc.systemProxy) { _ in touched() }
                     if ocproxy == false { Footnote(L("Нужен ocproxy: brew install ocproxy")) }
-                    Footnote(L("Для программ с поддержкой SOCKS"))
                 } else {
                     detailLink(.routes, summary: L("Записей: %@", doc.routes.count))
                     detailLink(.dns, summary: L("Зон: %@", doc.zones.count))
                 }
             } footer: { Footnote(L("Режим — свойство профиля: новый режим начнёт действовать со следующего подключения.")) }
-            if doc.mode == "proxy" { Footnote(L("Сети и DNS применяются только в режиме «Туннель».")) }
         case .advanced:
             NativeSection {
                 detailLink(.identity, summary: doc.name)
@@ -499,14 +494,7 @@ struct ProfileEditorView: View {
     }
 
     private func detailLink(_ target: Detail, summary: String) -> some View {
-        Button { edit(target) } label: {
-            HStack(spacing: 10) {
-                Text(target.title).foregroundStyle(.primary)
-                Spacer(minLength: 8)
-                Text(summary).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
-            }.frame(maxWidth: .infinity, minHeight: 26).contentShape(Rectangle())
-        }.buttonStyle(.plain).help(summary.isEmpty ? target.title : summary)
+        NativeNavigationRow(title: target.title, summary: summary) { edit(target) }
     }
 
     private func edit(_ target: Detail) {
@@ -605,7 +593,7 @@ struct ProfileEditorView: View {
                 if let why = !doc.csdScriptBase64.isEmpty ? ProfileDoc.csdScriptIssue(doc.csdScriptBase64) : nil { Footnote(why).foregroundStyle(Palette.bad) }
             }
         case .health:
-            NativeSection { field(L("Проверка доступа"), $doc.health, hint: L("URL, хост:порт или имя")) }
+            NativeSection { field(L("Ресурс"), $doc.health, hint: L("URL, хост:порт или имя")) }
         case .file:
             Text(doc.render()).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
         case .none: EmptyView()
@@ -915,22 +903,25 @@ struct ProfileEditorView: View {
     // Параметры кода для секрета в связке ключей: ocmac пишет их сам при
     // импорте QR и после «Запомнить, как я вхожу»; руками — редко.
     private var totpParamsRow: some View {
-        LabeledContent(L("Параметры кода")) {
-            HStack(spacing: 6) {
-                Picker("", selection: $doc.totpAlgorithm) {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Text(L("Алгоритм")).frame(width: 130, alignment: .leading)
+                Picker(L("Алгоритм"), selection: $doc.totpAlgorithm) {
                     ForEach(ProfileDoc.totpAlgorithms, id: \.self) { Text($0).tag($0) }
-                }
-                .labelsHidden().fixedSize()
-                .onChange(of: doc.totpAlgorithm) { _ in touched() }
-                Picker("", selection: $doc.totpDigits) {
+                }.labelsHidden().onChange(of: doc.totpAlgorithm) { _ in touched() }
+            }
+            HStack(spacing: 12) {
+                Text(L("Длина кода")).frame(width: 130, alignment: .leading)
+                Picker(L("Длина кода"), selection: $doc.totpDigits) {
                     ForEach(["6", "7", "8"], id: \.self) { Text(L("%@ цифр", $0)).tag($0) }
-                }
-                .labelsHidden().fixedSize()
-                .onChange(of: doc.totpDigits) { _ in touched() }
-                TextField("", text: $doc.totpPeriod, prompt: Text("30"))
-                    .labelsHidden().frame(width: 44)
-                    .onChange(of: doc.totpPeriod) { _ in touched() }
+                }.labelsHidden().onChange(of: doc.totpDigits) { _ in touched() }
+            }
+            HStack(spacing: 12) {
+                Text(L("Период")).frame(width: 130, alignment: .leading)
+                SetupInput(text: $doc.totpPeriod, label: L("Период"), placeholder: "30")
+                    .frame(width: 64, height: 24).onChange(of: doc.totpPeriod) { _ in touched() }
                 Text(L("с")).foregroundStyle(.secondary)
+                Spacer()
             }
         }
     }
@@ -1034,19 +1025,14 @@ struct ProfileEditorView: View {
             if let message {
                 Text(message).font(.system(size: 11)).foregroundStyle(Palette.ok)
             }
-            ProfileSetupNotice(state: systemState, checking: checkingSystem, check: checkSystem)
-            if systemState?.ready == false, let loadedName {
-                Button(L("Завершить настройку…")) { SetupFlow.shared.show(profile: loadedName) }.disabled(dirty)
-            }
+            ProfileSetupNotice(state: systemState, checking: checkingSystem, canFinish: loadedName != nil && !dirty,
+                               check: checkSystem, finish: { if let loadedName { SetupFlow.shared.show(profile: loadedName) } })
             HStack(spacing: 10) {
                 if saving || checkingSystem {
                     ProgressView().controlSize(.small)
                     Text(saving ? L("Проверяю и сохраняю…") : L("Проверяю готовность…")).font(.system(size: 12)).foregroundStyle(.secondary)
                 } else if blankDraft {
                     Text(L("Укажите адрес VPN.")).font(.system(size: 12)).foregroundStyle(.secondary)
-                } else if issues.isEmpty && !doc.url.trimmed.isEmpty && systemState?.ready != false {
-                    Label(L("Профиль без ошибок"), systemImage: "checkmark.circle.fill")
-                        .font(.system(size: 12)).foregroundStyle(Palette.ok)
                 }
                 Spacer()
                 // «Отменить» возвращает то, что лежит в файле.
@@ -1055,7 +1041,7 @@ struct ProfileEditorView: View {
                 Button(L("Сохранить профиль")) { save() }
                     .keyboardShortcut("s")
                     .buttonStyle(.borderedProminent)
-                    .disabled(!errors.isEmpty || doc.fileName.trimmed.isEmpty)
+                    .disabled(!dirty || !errors.isEmpty || doc.fileName.trimmed.isEmpty)
             }
         }
         .padding(.horizontal, 20).padding(.vertical, 12)

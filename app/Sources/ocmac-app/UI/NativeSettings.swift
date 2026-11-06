@@ -42,6 +42,23 @@ extension NativeSection where Header == EmptyView {
     init(@ViewBuilder content: () -> Content, @ViewBuilder footer: () -> Footer) { self.init(content: content, header: { EmptyView() }, footer: footer) }
 }
 
+/// One treatment for rows that open a secondary editor.
+struct NativeNavigationRow: View {
+    let title: String
+    var summary = ""
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Text(title).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                Text(summary).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity, minHeight: 26).contentShape(Rectangle())
+        }.buttonStyle(.plain).help(summary.isEmpty ? title : summary)
+    }
+}
+
 struct SettingsIcon: View {
     let name: String
     var size: CGFloat = 17
@@ -84,7 +101,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .general: return "settings"
         case .notifications: return "bell"
         case .diagnostics: return "activity"
-        case .logs: return "mail"
+        case .logs: return "file-text"
         case .about: return "info"
         }
     }

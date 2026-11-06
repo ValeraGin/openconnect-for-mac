@@ -3,7 +3,9 @@ import SwiftUI
 struct ProfileSetupNotice: View {
     let state: ProfileSystemState?
     let checking: Bool
+    let canFinish: Bool
     let check: () -> Void
+    let finish: () -> Void
 
     var body: some View {
         if let state, !state.ready {
@@ -11,16 +13,11 @@ struct ProfileSetupNotice: View {
                 Label(state.error ?? state.setupMessage,
                       systemImage: "exclamationmark.triangle")
                     .font(.system(size: 12)).foregroundStyle(Palette.warn)
-                if state.needsSetup {
-                    Text(L("Выполните команду в Терминале. Для установки скрипта понадобится пароль администратора Mac."))
-                        .font(.system(size: 11)).foregroundStyle(.secondary)
-                    HStack {
-                        Text("ocmac prepare && sudo ocmac install").font(.ocMono).textSelection(.enabled)
-                        CopyButton(text: "ocmac prepare && sudo ocmac install")
-                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack {
+                    Button(L("Завершить настройку…"), action: finish).disabled(!canFinish || checking)
+                    Button(checking ? L("Проверяю…") : L("Проверить готовность"), action: check).disabled(checking)
                 }
-                Button(checking ? L("Проверяю…") : L("Проверить готовность"), action: check)
-                    .disabled(checking)
             }
         }
     }

@@ -8,8 +8,6 @@ struct SettingsWindow: View {
     var body: some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("OpenConnect").fontWeight(.semibold)
-                    .frame(height: 24, alignment: .leading).padding(12)
                 ForEach(SettingsPage.allCases) { item in
                     if item == .general || item == .about { Divider().padding(.vertical, 8) }
                     Button { page = item } label: {
@@ -24,7 +22,7 @@ struct SettingsWindow: View {
                     }.buttonStyle(.plain).accessibilityAddTraits(page == item ? .isSelected : [])
                 }
                 Spacer()
-            }.padding(.horizontal, 8).frame(width: 166).background(Color(nsColor: .controlBackgroundColor))
+            }.padding(.horizontal, 8).padding(.top, 12).frame(width: 166).background(Color(nsColor: .controlBackgroundColor))
             Divider()
             // One persistent editor owns the draft across all sidebar pages.
             ProfileEditorView(page: $page)

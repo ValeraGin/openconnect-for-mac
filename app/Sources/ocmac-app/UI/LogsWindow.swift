@@ -45,7 +45,7 @@ struct LogsView: View {
             }
             Toggle(L("следить"), isOn: $follow).toggleStyle(.checkbox)
         }
-        .padding(.horizontal, 12).padding(.vertical, 8)
+        .padding(.horizontal, 20).padding(.vertical, 12)
     }
 
     private var content: some View {
@@ -54,7 +54,7 @@ struct LogsView: View {
                 LazyVStack(alignment: .leading, spacing: 1) {
                     if let problem = snapshot.problem {
                         Text(problem).font(.ocNote).foregroundStyle(Palette.tertiary)
-                            .padding(12)
+                            .padding(.vertical, 8)
                     }
                     ForEach(snapshot.lines) { line in
                         Text(line.text.isEmpty ? " " : line.text)
@@ -66,7 +66,7 @@ struct LogsView: View {
                     }
                     Color.clear.frame(height: 1).id("bottom")
                 }
-                .padding(.horizontal, 12).padding(.vertical, 8)
+                .padding(.horizontal, 20).padding(.vertical, 12)
             }
             .background(Color(nsColor: .textBackgroundColor))
             .onChange(of: snapshot.lines.count) { _ in
@@ -90,7 +90,7 @@ struct LogsView: View {
             }
             .disabled(source == nil)
         }
-        .padding(.horizontal, 12).padding(.vertical, 7)
+        .padding(.horizontal, 20).padding(.vertical, 12)
     }
 
     private func color(_ kind: LogReader.Line.Kind) -> Color {

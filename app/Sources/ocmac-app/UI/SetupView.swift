@@ -56,7 +56,9 @@ struct SetupView: View {
             Divider()
             HStack {
                 if flow.step != .profile { Button(L("Назад")) { flow.back() }.disabled(locked) }
-                Button(L("Закрыть")) { dismiss(); WindowBridge.closeQuietSetup() }.disabled(locked || checkingAccess)
+                if flow.step != .verify || !connected {
+                    Button(L("Закрыть")) { dismiss(); WindowBridge.closeQuietSetup() }.disabled(locked || checkingAccess)
+                }
                 Spacer()
                 if flow.busy || flow.checking { ProgressView().controlSize(.small) }
                 switch flow.step {

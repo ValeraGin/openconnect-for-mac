@@ -149,7 +149,6 @@
 "Режим — свойство профиля: новый режим начнёт действовать со следующего подключения." = "The mode belongs to the profile: a new mode takes effect on the next connection.";
 "Порт" = "Port";
 "Включать системный SOCKS" = "Set the system-wide SOCKS proxy";
-"Сети и DNS применяются только в режиме «Туннель»." = "Networks and DNS apply in Tunnel mode only.";
 "Что не попало в список, идёт мимо туннеля. «Всё в туннель» — 0.0.0.0/1 и 128.0.0.0/1." = "Anything not listed goes outside the tunnel. For everything, use 0.0.0.0/1 and 128.0.0.0/1.";
 "«vpn» вместо адреса — резолвер, который прислал шлюз. Более длинная зона перебивает короткую." = "\"vpn\" instead of an address means the resolver the gateway sent. A longer zone wins over a shorter one.";
 "Правила формы" = "Form rules";
@@ -167,7 +166,6 @@
 "Убрать зону" = "Remove zone";
 "Добавить зону" = "Add zone";
 "Файл изменился на диске, пока здесь есть правки: сохранение спросит, что оставить." = "The file changed on disk while this form has edits: saving will ask what to keep.";
-"Профиль без ошибок" = "Profile has no errors";
 
 /* Мастер первого запуска */
 "необязательно" = "optional";
@@ -235,7 +233,6 @@
 "Сейчас подключён «%@». Он отключится, для нового профиля потребуется вход." = "“%@” is connected now. It will disconnect, and the new profile will need a sign-in.";
 "Секреты хранятся вне профиля: в связке ключей или в KeePassXC." = "Secrets live outside the profile: in the keychain or in KeePassXC.";
 "Туннель" = "Tunnel";
-"Для программ с поддержкой SOCKS" = "For apps that speak SOCKS";
 "Нужен ocproxy: brew install ocproxy" = "Needs ocproxy: brew install ocproxy";
 
 /* Редактор, разметка формы, мастер — часть третья */
@@ -462,7 +459,6 @@
 "Проверяю и сохраняю…" = "Checking and saving…";
 "Проверяю готовность…" = "Checking readiness…";
 "CSD изменён: обновите системную часть перед подключением" = "CSD setup needed: update system components before connecting";
-"Выполните команду в Терминале. Для установки скрипта понадобится пароль администратора Mac." = "Run this command in Terminal. Installing the script requires your Mac administrator password.";
 "Проверить готовность" = "Check readiness";
 "VPN подключён" = "VPN connected";
 "Рабочий ресурс отвечает" = "The work resource responds";
@@ -581,7 +577,6 @@
 "Совместимость и прокси" = "Compatibility and proxy";
 "Предпросмотр файла" = "File preview";
 "Не подключён" = "Disconnected";
-"Параметры профиля" = "Profile details";
 "Сохраните изменения перед подключением." = "Save changes before connecting.";
 "Сейчас подключён другой профиль: %@" = "Another profile is connected: %@";
 "Код из SMS нужно вводить при каждом подключении." = "Enter the SMS code for each connection.";
@@ -595,3 +590,7 @@
 "Укажите адрес VPN." = "Enter the VPN address.";
 "DNS-зона" = "DNS zone";
 "Резолвер" = "Resolver";
+"Алгоритм" = "Algorithm";
+"Длина кода" = "Code length";
+"Период" = "Period";
+"Ресурс" = "Resource";

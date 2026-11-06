@@ -23,7 +23,7 @@ struct DiagnosticsView: View {
                     .foregroundStyle(Palette.text)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
+                    .padding(20)
             }
             .background(Color(nsColor: .textBackgroundColor))
             Divider()
@@ -40,19 +40,21 @@ struct DiagnosticsView: View {
 
     private var toolbar: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Label(L("Диагностика"), systemImage: "stethoscope").fontWeight(.semibold)
-                Spacer()
-                if running { ProgressView().controlSize(.small) }
-                if let stamp { Text(Self.clock.string(from: stamp)).font(.caption).foregroundStyle(.secondary) }
+            if !embedded {
+                HStack {
+                    Label(L("Диагностика"), systemImage: "stethoscope").fontWeight(.semibold)
+                    Spacer()
+                }
             }
             HStack {
                 Button(L("Повторить")) { run() }.disabled(running)
                 Button(L("Сохранить отчёт…")) { saveReport() }.disabled(reporting || store.busy != nil)
                 Spacer()
+                if running { ProgressView().controlSize(.small) }
+                else if let stamp { Text(Self.clock.string(from: stamp)).font(.caption).foregroundStyle(.secondary) }
                 Button(L("Журналы…")) { WindowBridge.open(WindowID.logs) }
             }
-        }.padding(16)
+        }.padding(.horizontal, 20).padding(.vertical, 12)
     }
 
     // Отчёт для разбора: один файл с версиями, диагностикой и хвостами
@@ -101,7 +103,7 @@ struct DiagnosticsView: View {
             }
             .disabled(store.busy != nil)
         }
-        .padding(.horizontal, 12).padding(.vertical, 9)
+        .padding(.horizontal, 20).padding(.vertical, 12)
     }
 
     private static let clock: DateFormatter = {

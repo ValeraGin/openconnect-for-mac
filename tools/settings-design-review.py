@@ -24,6 +24,16 @@ def cases():
             result.append((f'{lang}-{page}', lang, theme, page, '', 'normal', []))
         for detail in DETAILS:
             result.append((f'{lang}-detail-{detail}', lang, theme, 'advanced', detail, 'normal', []))
+        for detail in ['components', 'files', 'licenses']:
+            result.append((f'{lang}-about-{detail}', lang, theme, 'about', '', 'normal', ['--about-detail', detail]))
+        for step, state in [(0, 'empty'), (0, 'proxy'), (1, 'ready'), (2, 'ready'), (3, 'dns'), (3, 'empty')]:
+            result.append((f'{lang}-setup-{step}-{state}', lang, theme, 'connection', '', 'normal',
+                           ['--review-screen', 'setup', '--step', str(step), '--setup-state', state]))
+        result.append((f'{lang}-setup-connected', lang, theme, 'connection', '', 'normal',
+                       ['--review-screen', 'setup', '--step', '2', '--setup-state', 'ready', 'connected']))
+        for state in ['down', 'connected', 'needsLogin']:
+            result.append((f'{lang}-connection-window-{state}', lang, theme, 'connection', '', 'normal',
+                           ['--review-screen', 'connection', '--state', state]))
         for variant in ['empty', 'many', 'long', 'invalid']:
             result.append((f'{lang}-{variant}', lang, theme, 'connection', '', variant, []))
         for state in ['connected', 'paused', 'starting', 'needsLogin', 'lost']:
@@ -63,11 +73,14 @@ def fixture(path, variant):
 
 
 def main():
+    global OUT
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output', type=Path, default=OUT)
     parser.add_argument('--only', action='append')
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--gallery-only', action='store_true')
     args = parser.parse_args()
+    OUT = args.output.resolve()
     OUT.mkdir(parents=True, exist_ok=True)
     digest = hashlib.sha256((APP / 'Contents/MacOS/ocmac-app').read_bytes()).hexdigest()
     require_display = runpy.run_path(str(ROOT / 'design-lab/review.py'))['require_active_display']
@@ -79,10 +92,14 @@ def main():
         data = OUT / 'fixtures' / name; fixture(data, variant)
         ready = png.with_suffix('.ready.json'); done = png.with_suffix('.capture-done')
         for item in [png, meta, ready, done]: item.unlink(missing_ok=True)
+        extra = list(extra)
+        screen = 'settings'
+        if '--review-screen' in extra:
+            i = extra.index('--review-screen'); screen = extra[i + 1]; del extra[i:i + 2]
         command = ['open', '-g', '-n', '-W']
         for key, directory in [('OCMAC_CONFIG_DIR', 'config'), ('OCMAC_STATE_DIR', 'root'), ('OCMAC_USER_STATE', 'state'), ('OCMAC_LOG_DIR', 'logs')]:
             command += ['--env', f'{key}={data / directory}']
-        command += [str(APP), '--args', '--stage', '--capture-passive', '--screenshot', 'settings', '--settings-page', page,
+        command += [str(APP), '--args', '--stage', '--capture-passive', '--screenshot', screen, '--settings-page', page,
                     '--shot', str(png), f'--{theme}', '-InterfaceLanguage', lang, '-AppleLanguages', f'({lang})']
         if detail: command += ['--settings-detail', detail]
         command += extra
