@@ -46,6 +46,8 @@ struct Args {
     var importCamera = false        // QR с камеры, без сверки с кодом
     var qrPNG: String?              // QR из строки со входа — в PNG (для проверок)
     var screenAccess = false        // есть ли право на запись экрана
+    var cameraRequest = false
+    var cameraCheck: String?
     var cameraAccess = false        // что с доступом к камере (не спрашивает)
     var teachDialogShot: String?
     var prompt: String?
@@ -100,6 +102,9 @@ func usage() -> String {
                             проверок: то, что человек выделил бы на экране)
       --screen-access       есть ли право на запись экрана: granted или denied
                             (снимок без права — пустой рабочий стол)
+      --camera-request      с --camera-check: запросить право, если ещё не выдано
+      --camera-check FILE   живая проверка кадров и предпросмотра без фокуса;
+                            JSON в FILE, разрешение не запрашивает; --select — камера
       --camera-access       доступ к камере: authorized, denied, restricted или
                             not-determined; сам доступ не запрашивает
       --totp-now            напечатать текущий код из OCMAC_TOTP_SECRET с
@@ -199,6 +204,8 @@ func parseArgs() -> Args {
         case "--qr-png": a.qrPNG = next(arg)
         case "--screen-access": a.screenAccess = true
         case "--camera-access": a.cameraAccess = true
+        case "--camera-check": a.cameraCheck = next(arg)
+        case "--camera-request": a.cameraRequest = true
         case "--list": a.listEntries = true
         case "--totp-now": a.totpNow = true
         case "--learn": a.learn = true
@@ -423,7 +430,7 @@ if args.selfTest {
                  "--always-show", "--no-window", "--no-autofill", "--fill-hosts", "--probe", "--dump-script",
                  "--csd-wrapper",
                  "--selftest", "--import-qr", "--print-secret", "--print-params", "--list", "--totp-now",
-                 "--print-all", "--import-otp", "--import-camera", "--qr-png", "--screen-access", "--camera-access",
+                 "--print-all", "--import-otp", "--import-camera", "--qr-png", "--screen-access", "--camera-access", "--camera-check", "--camera-request",
                  "--learn", "--learn-selftest", "--learn-probe", "--teach-out", "--teach-on",
                  "--teach-dialog-shot", "--camera-window-shot", "--out", "--select", "--json", "--insecure",
                  "--verbose", "-v", "--help", "-h"]
@@ -499,6 +506,15 @@ if args.cameraAccess {
     @unknown default: out("unknown")
     }
     exit(0)
+}
+
+if let path = args.cameraCheck {
+    let app = NSApplication.shared
+    app.setActivationPolicy(.accessory)
+    DispatchQueue.main.async {
+        exit(QRCameraWindow.check(to: path, selecting: args.selectEntry, requestAccess: args.cameraRequest) ? 0 : 1)
+    }
+    app.run()
 }
 
 // Камера: окно с видеопотоком, первое распознанное — ответ. Своё приложение

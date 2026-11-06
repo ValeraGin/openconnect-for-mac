@@ -604,6 +604,7 @@ final class LearnCheck: NSObject, WKNavigationDelegate, WKScriptMessageHandler, 
         let at = Date()
         let code = TOTP.code(secretBase32: QRImport.base32Encode(ours), at: at) ?? ""
         guard let frame = Self.cameraFrame(qr: payload) else { ok("камера: кадр собран", false, ""); return }
+        ok("камера: реальный вид предпросмотра получает кадр в модальном цикле (синтетика)", QRCameraWindow.previewSelfTest(frame), "")
         let found = QRCameraScanner.payloads(pixelBuffer: frame)
         ok("камера: QR найден на кадре 1280×720, наклонён и смещён", found == [payload], "строк: \(found.count)")
         let entries = found.flatMap { (try? QRImport.parse($0)) ?? [] }

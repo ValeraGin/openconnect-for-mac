@@ -13,7 +13,11 @@ final class QRCameraScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
     let session = AVCaptureSession()
     private let queue = DispatchQueue(label: "ru.ocmac.qr-camera")
     private var last = Date.distantPast
+    private var lastPreview = Date.distantPast
     var onPayloads: (([String]) -> Void)?
+    // Called on the capture queue; diagnostics never decode or save QR secrets.
+    var onFrame: ((CVPixelBuffer) -> Void)?
+    var decodeQR = true
 
     static func cameras() -> [AVCaptureDevice] {
         var types: [AVCaptureDevice.DeviceType] = [.builtInWideAngleCamera]
@@ -63,9 +67,15 @@ final class QRCameraScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer,
                        from connection: AVCaptureConnection) {
-        // Четыре кадра в секунду хватает: QR на экране телефона не убегает.
-        guard Date().timeIntervalSince(last) > 0.25, let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
-        last = Date()
+        guard let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        let now = Date()
+        // Smooth preview and QR detection share the very same camera frames.
+        if now.timeIntervalSince(lastPreview) >= 1.0 / 15 {
+            lastPreview = now
+            onFrame?(pb)
+        }
+        guard decodeQR, now.timeIntervalSince(last) > 0.25 else { return }
+        last = now
         let found = Self.payloads(pixelBuffer: pb)
         if !found.isEmpty { ModalCallbacks.perform { [weak self] in self?.onPayloads?(found) } }
     }
@@ -95,6 +105,11 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
     private var result: QRImport.Entry?
     private var seen = Set<String>()
     private var running = false
+    private var receivedFrame = false
+    private var lastFrameAt = Date.distantPast
+    private var frameTimer: Timer?
+    private var preview: NSImageView?
+    private let previewContext = CIContext()
 
     /// code — введённый при входе код: по нему находится нужная запись.
     /// Пустой — добавление с нуля: годится единственная запись TOTP в QR
@@ -139,7 +154,7 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
         return TeachDialog.entryMatches(e, code: code, at: at)
     }
 
-    private func build(withPreview: Bool) {
+    private func build(withPreview: Bool, passive: Bool = false) {
         let w: CGFloat = 560, h: CGFloat = 520
         let content = NSView(frame: NSRect(x: 0, y: 0, width: w, height: h))
 
@@ -155,15 +170,11 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
         preview.layer?.backgroundColor = NSColor.black.cgColor
         preview.layer?.cornerRadius = 8
         if withPreview {
-            let layer = AVCaptureVideoPreviewLayer(session: scanner.session)
-            layer.videoGravity = .resizeAspect
-            layer.frame = preview.bounds
-            layer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
-            if let c = layer.connection, c.isVideoMirroringSupported {
-                c.automaticallyAdjustsVideoMirroring = false
-                c.isVideoMirrored = true            // как в зеркале: телефон легче навести
-            }
-            preview.layer?.addSublayer(layer)
+            let image = NSImageView(frame: preview.bounds)
+            image.imageScaling = .scaleProportionallyUpOrDown
+            image.autoresizingMask = [.width, .height]
+            preview.addSubview(image)
+            self.preview = image
         }
         content.addSubview(preview)
 
@@ -187,8 +198,12 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
         cancel.frame = NSRect(x: w - 116, y: 12, width: 100, height: 30)
         content.addSubview(cancel)
 
-        window = NSWindow(contentRect: content.frame, styleMask: [.titled, .closable],
-                          backing: .buffered, defer: false)
+        if passive {
+            window = NSPanel(contentRect: content.frame, styleMask: [.titled, .nonactivatingPanel], backing: .buffered, defer: false)
+            window.ignoresMouseEvents = true
+        } else {
+            window = NSWindow(contentRect: content.frame, styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        }
         window.title = L("OpenConnect for Mac — QR второго фактора с камеры")
         window.contentView = content
         window.delegate = self
@@ -207,6 +222,19 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
         build(withPreview: true)
         running = true
         scanner.onPayloads = { [weak self] found in self?.handle(found) }
+        scanner.onFrame = { [weak self] pb in
+            self?.displayFrame(pb)
+            let width = CVPixelBufferGetWidth(pb), height = CVPixelBufferGetHeight(pb)
+            ModalCallbacks.perform { [weak self] in
+                guard let self, self.running else { return }
+                self.lastFrameAt = Date()
+                if !self.receivedFrame {
+                    self.receivedFrame = true
+                    self.setStatus(L("ищу QR…"))
+                    Log.info("камера: получен кадр \(width)×\(height)")
+                }
+            }
+        }
         waitingForPermission = true
         setStatus(L("Ожидаю разрешение на камеру…"))
         picker.isEnabled = false
@@ -247,6 +275,7 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
         NSApp.runModal(for: window)
         t.invalidate()
         running = false
+        frameTimer?.invalidate(); frameTimer = nil
         permission.cancel()
         cameraGeneration += 1
         scanner.stop()
@@ -254,6 +283,19 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
         Log.info("камера: выключена" + (result == nil ? "" : ", запись найдена"))
         return (result, result != nil ? "" : lastStatus.isEmpty
             ? L("QR с камеры не прочитан — можно вставить секрет или выбрать файл QR") : lastStatus)
+    }
+
+    /// Render the scanner's frames explicitly. A separate AV preview layer can
+    /// stay black inside the authenticator's nested AppKit modal loop.
+    private func displayFrame(_ buffer: CVPixelBuffer) {
+        let source = CIImage(cvPixelBuffer: buffer)
+        let scale = min(1, 1056 / source.extent.width)
+        let image = source.transformed(by: CGAffineTransform(scaleX: -scale, y: scale))
+        guard let cg = previewContext.createCGImage(image, from: image.extent) else { return }
+        ModalCallbacks.perform { [weak self] in
+            guard let self else { return }
+            self.preview?.image = NSImage(cgImage: cg, size: .zero)
+        }
     }
 
     private func handle(_ payloads: [String]) {
@@ -304,6 +346,9 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
         cameraGeneration += 1
         let ticket = cameraGeneration
         picker.isEnabled = false
+        receivedFrame = false
+        lastFrameAt = .distantPast
+        frameTimer?.invalidate()
         setStatus(L("Подключаю камеру…"))
         scanner.start(device) { [weak self] error in
             guard let self, self.running, self.cameraGeneration == ticket else { return }
@@ -312,8 +357,18 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
                 self.finish()
             } else {
                 self.picker.isEnabled = true
-                self.setStatus(L("ищу QR…"))
-                Log.info("камера: включена, ищу QR второго фактора")
+                if !self.receivedFrame { self.setStatus(L("Ожидаю изображение с камеры…")) }
+                Log.info("камера: сессия запущена (\(device.localizedName)), ожидаю кадры")
+                let timer = Timer(timeInterval: 8, repeats: true) { [weak self] _ in
+                    guard let self, self.running, self.cameraGeneration == ticket else { return }
+                    if Date().timeIntervalSince(self.lastFrameAt) > 8 {
+                        self.receivedFrame = false
+                        self.setStatus(L("Камера не передаёт изображение. Выберите другую камеру или откройте её заново."))
+                        Log.info("камера: нет новых кадров в течение 8 секунд")
+                    }
+                }
+                self.frameTimer = timer
+                RunLoop.main.add(timer, forMode: .modalPanel)
             }
         }
     }
@@ -328,10 +383,25 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
     private func finish() {
         guard running else { return }
         running = false
+        frameTimer?.invalidate(); frameTimer = nil
         permission.cancel()
         cameraGeneration += 1
         scanner.stop()
         NSApp.stopModal()
+    }
+
+    /// Synthetic regression: a scanner frame reaches the actual image view
+    /// while the main dispatch callback is inside a nested modal run loop.
+    static func previewSelfTest(_ frame: CVPixelBuffer) -> Bool {
+        let w = QRCameraWindow(code: "", at: Date())
+        w.build(withPreview: true, passive: true)
+        DispatchQueue.global(qos: .userInitiated).async { w.displayFrame(frame) }
+        let deadline = Date().addingTimeInterval(3)
+        while w.preview?.image == nil && Date() < deadline {
+            RunLoop.current.run(mode: .modalPanel, before: Date().addingTimeInterval(0.01))
+        }
+        guard let image = w.preview?.image?.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return false }
+        return image.width == min(1056, CVPixelBufferGetWidth(frame)) && image.height > 0
     }
 
     /// Снимок окна без включения камеры — чтобы вид проверялся без человека
@@ -349,5 +419,77 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
         view.cacheDisplay(in: view.bounds, to: rep)
         guard let png = rep.representation(using: .png, properties: [:]) else { return false }
         return (try? png.write(to: URL(fileURLWithPath: path))) != nil
+    }
+}
+
+
+extension QRCameraWindow {
+    /// Explicit hardware check: no permissions prompt, QR decoding or saved video.
+    /// The caller can capture the passive window after the ready handoff.
+    static func check(to path: String, selecting name: String?, requestAccess: Bool = false) -> Bool {
+        let foreground = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        if requestAccess && AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
+            let permission = CameraPermissionRequest()
+            var replied = false
+            permission.start { _ in replied = true }
+            let deadline = Date().addingTimeInterval(60)
+            while !replied && Date() < deadline { RunLoop.current.run(mode: .modalPanel, before: Date().addingTimeInterval(0.05)) }
+            permission.cancel()
+        }
+        var report: [String: Any] = ["authorized": AVCaptureDevice.authorizationStatus(for: .video) == .authorized]
+        func write() { if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) { try? data.write(to: URL(fileURLWithPath: path)) } }
+        guard report["authorized"] as? Bool == true else { write(); return false }
+        let devices = QRCameraScanner.cameras()
+        guard let device = name == nil ? QRCameraScanner.preferred(devices) : devices.first(where: { $0.localizedName.localizedCaseInsensitiveContains(name!) }),
+              let screen = NSScreen.screens.first(where: { CGDisplayIsBuiltin(CGDirectDisplayID(($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0)) != 0 }) else {
+            report["error"] = "Camera or built-in display unavailable"; write(); return false
+        }
+        let w = QRCameraWindow(code: "", at: Date())
+        w.build(withPreview: true, passive: true)
+        w.window.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX + 20, y: screen.visibleFrame.maxY - w.window.frame.height - 20))
+        w.window.orderFrontRegardless()
+        w.scanner.decodeQR = false
+        let lock = NSLock()
+        var frames = 0; var width = 0; var height = 0; var luminance = 0.0; var spread = 0.0
+        w.scanner.onFrame = { pb in
+            w.displayFrame(pb)
+            CVPixelBufferLockBaseAddress(pb, .readOnly)
+            defer { CVPixelBufferUnlockBaseAddress(pb, .readOnly) }
+            guard let base = CVPixelBufferGetBaseAddress(pb) else { return }
+            let bytes = base.assumingMemoryBound(to: UInt8.self)
+            let stride = CVPixelBufferGetBytesPerRow(pb), ww = CVPixelBufferGetWidth(pb), hh = CVPixelBufferGetHeight(pb)
+            var values = [Double]()
+            for y in Swift.stride(from: 0, to: hh, by: 32) { for x in Swift.stride(from: 0, to: ww, by: 32) {
+                let i = y * stride + x * 4
+                values.append((Double(bytes[i]) + Double(bytes[i+1]) + Double(bytes[i+2])) / 3)
+            } }
+            let mean = values.reduce(0,+) / Double(max(1, values.count))
+            let variance = values.reduce(0) { $0 + ($1 - mean) * ($1 - mean) } / Double(max(1, values.count))
+            lock.lock(); frames += 1; width = ww; height = hh; luminance = mean; spread = variance.squareRoot(); lock.unlock()
+        }
+        var started = false; var failure: String?
+        w.scanner.start(device) { error in started = error == nil; failure = error?.localizedDescription }
+        let deadline = Date().addingTimeInterval(20)
+        var handedOff = false
+        while Date() < deadline && failure == nil {
+            RunLoop.current.run(mode: .modalPanel, before: Date().addingTimeInterval(0.05))
+            lock.lock(); let count = frames; lock.unlock()
+            if started && count >= 8 && !handedOff {
+                w.setStatus("Live frames: \(count)")
+                let ready: [String: Any] = ["windowID": w.window.windowNumber, "camera": device.localizedName]
+                if let data = try? JSONSerialization.data(withJSONObject: ready) { try? data.write(to: URL(fileURLWithPath: path + ".ready")) }
+                handedOff = true
+            }
+            if handedOff && FileManager.default.fileExists(atPath: path + ".done") { break }
+        }
+        w.scanner.stop(); w.window.orderOut(nil)
+        lock.lock()
+        report.merge(["camera": device.localizedName, "frames": frames, "width": width, "height": height,
+                      "mean": luminance, "standardDeviation": spread, "running": started,
+                      "focusPreserved": foreground == NSWorkspace.shared.frontmostApplication?.processIdentifier && !NSApp.isActive]) { _, new in new }
+        let ok = started && frames >= 8 && spread > 2
+        lock.unlock()
+        if let failure { report["error"] = failure }
+        write(); return ok
     }
 }

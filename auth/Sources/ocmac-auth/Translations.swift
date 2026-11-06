@@ -115,6 +115,8 @@ enum Translations {
         "ищу QR…": "looking for a QR code…",
         "камера": "camera",
         "Ожидаю разрешение на камеру…": "Waiting for camera permission…",
+        "Ожидаю изображение с камеры…": "Waiting for camera frames…",
+        "Камера не передаёт изображение. Выберите другую камеру или откройте её заново.": "The camera is not sending frames. Select another camera or reopen it.",
         "Подключаю камеру…": "Starting camera…",
         "камера не включилась: %@": "the camera did not start: %@",
         "камера не найдена": "no camera found",

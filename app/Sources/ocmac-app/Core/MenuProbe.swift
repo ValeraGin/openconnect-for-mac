@@ -40,15 +40,34 @@ enum MenuProbe {
 //   итог — строка «проверка прав: ИТОГ» в app.log
 enum AccessProbe {
     static func handle(_ url: URL) -> Bool {
-        guard url.scheme == "ocmac", url.host == "debug-access" else { return false }
+        guard url.scheme == "ocmac", ["debug-access", "debug-camera"].contains(url.host ?? "") else { return false }
         let token = URLComponents(url: url, resolvingAgainstBaseURL: false)?
             .queryItems?.first { $0.name == "token" }?.value
         guard let token, let expected = Notifier.expectedToken, !expected.isEmpty, token == expected else {
             AppLog.write("debug-access: чужой токен — пропускаю")
             return true
         }
-        DispatchQueue.global(qos: .utility).async { run() }
+        let camera = url.host == "debug-camera"
+        let request = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.contains { $0.name == "request" && $0.value == "1" } == true
+        let selection = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "camera" }?.value
+        DispatchQueue.global(qos: .utility).async {
+            if camera { checkCamera(selection: selection, requestAccess: request) } else { run() }
+        }
         return true
+    }
+
+    /// Explicit token-protected hardware diagnostic. No sign-in or secret import.
+    private static func checkCamera(selection: String?, requestAccess: Bool) {
+        guard let auth = OCMacClient.shared.versions(maxAge: 0)["auth_path"], !auth.isEmpty else {
+            AppLog.write("camera check: authenticator unavailable"); return
+        }
+        let path = (AppLog.path as NSString).deletingLastPathComponent + "/camera-check.json"
+        for suffix in ["", ".ready", ".done"] { try? FileManager.default.removeItem(atPath: path + suffix) }
+        var args = ["--camera-check", path]
+        if requestAccess { args.append("--camera-request") }
+        if let selection { args += ["--select", selection] }
+        let result = Shell.run(auth, args, timeout: requestAccess ? 95 : 30)
+        AppLog.write("camera check: exit \(result.code); report: \(path)")
     }
 
     static func own() -> (screen: String, camera: String) {
