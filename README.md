@@ -124,7 +124,9 @@ directories, and it only touches what it created itself. See
   the assistant offers gateway-supplied subnets and DNS for review. Apply saves the
   selected additions and applies them to that same live session; Skip retains existing
   settings. Existing entries and disabled networks are preserved. All-IPv4 routing
-  requires an explicit choice, and DNS without a domain is never made global. A changed
+  requires an explicit choice. DNS policy is separate: all domains use the gateway DNS
+  only after you approve that mode. A search suffix does not restrict DNS to that domain.
+  Split-DNS domains come from the gateway’s split list, not its default search suffix. A changed
   session or externally edited profile invalidates confirmation. You can then check
   a work resource.
 
@@ -368,8 +370,12 @@ from GitHub and Homebrew; the app has no automatic update check.
 - Password groups (`Auth = password`: login, password and an SMS code) need a
   human for the code: OpenConnect for Mac fills in the password and asks for the SMS code in
   a small window, so they never reconnect silently.
-- Full tunnel is configured as `0.0.0.0/1` + `128.0.0.0/1`; there is no
-  "route everything and rewrite system DNS" mode.
+- Full IPv4 traffic uses `0.0.0.0/1` + `128.0.0.0/1`. DNS is configured separately
+  with `[DNSPolicy] Mode = all` (gateway DNS for all domains) or `split` (default).
+  Optional `SearchDomain` completes short names. All mode uses all supplied IPv4
+  DNS servers and a dedicated macOS resolver removed on pause/disconnect; physical
+  network service settings are preserved. Explicit `[DNS]` entries remain overrides.
+  This policy requires helper 0.10.0 or newer (`sudo ocmac install`).
 - IPv6 inside the tunnel: the address is set, routes are not.
 - The Homebrew-installed shared libraries of `openconnect` stay in a
   user-writable prefix; the helper verifies their hashes, which catches

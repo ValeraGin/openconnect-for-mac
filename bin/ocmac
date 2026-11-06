@@ -657,6 +657,17 @@ helper_supports_upstream() {
     v=$("$h" version 2>/dev/null | awk '{print $2}')
     printf '%s\n' "$v" | awk -F. 'NF == 3 && /^[0-9]+[.][0-9]+[.][0-9]+$/ {exit !($1>0 || $2>8 || ($2==8 && $3>=3))} NF != 3 || !/^[0-9]+[.][0-9]+[.][0-9]+$/ {exit 1}'
 }
+helper_supports_dns_policy() {
+    local h v
+    h=${OCMAC_SELFTEST_HELPER:-$(helper_path)} || return 1
+    v=$("$h" version 2>/dev/null | awk '{print $2}')
+    printf '%s\n' "$v" | awk -F. 'NF == 3 && /^[0-9]+[.][0-9]+[.][0-9]+$/ {exit !($1>0 || $2>=10)} NF != 3 || !/^[0-9]+[.][0-9]+[.][0-9]+$/ {exit 1}'
+}
+require_dns_policy_helper() {
+    if [ "${P_DNS_MODE:-split}" = all ] || [ -n "${P_DNS_SEARCH:-}" ]; then
+        helper_supports_dns_policy || die "DNS policy requires ocmac-helper 0.10.0 or newer: sudo ocmac install"
+    fi
+}
 load_profile() {
     local p="${1:-}"
     [ -n "$p" ] || p=$(profile_default)
@@ -666,7 +677,7 @@ load_profile() {
     P_FILE=$(profile_file "$p")
     if [ -n "$P_FILE" ]; then load_profile_file "$P_FILE" "$p"; return 0; fi
     P_KIND=tunnel; P_PROXY_PORT=11080; P_SYS_PROXY=off
-    P_UPSTREAM=""; P_MTU=""; P_DTLS=on
+    P_UPSTREAM=""; P_MTU=""; P_DTLS=on; P_DNS_MODE=split; P_DNS_SEARCH=""
     P_URL=$(profile_get "$p" url);   [ -n "$P_URL" ] || die "у профиля [$p] нет url"
     P_TITLE=$(profile_get "$p" name); P_TITLE="${P_TITLE:-$p}"
     P_USER=$(profile_get "$p" user);  P_USER="${P_USER:-$(id -un)}"
@@ -859,6 +870,10 @@ load_profile_file() { # файл имя
         auto|keychain|keepassxc|command|ask) ;;
         *) die "профиль [$P_NAME]: password = auto | keychain | keepassxc | command | ask, а не '$P_PASSWORD'" ;;
     esac
+    P_DNS_MODE=$(pf_get "$f" DNSPolicy Mode); P_DNS_MODE="${P_DNS_MODE:-split}"
+    P_DNS_SEARCH=$(pf_get "$f" DNSPolicy SearchDomain)
+    case "$P_DNS_MODE" in split|all) ;; *) die "DNSPolicy Mode must be split or all" ;; esac
+    [ -z "$P_DNS_SEARCH" ] || valid_zone "$P_DNS_SEARCH" || die "Invalid DNS search domain"
     P_HEALTH=$(pf_get "$f" Health Check)
     # Транспорт: MTU и DTLS. Нужны редко — вложенный VPN, мобильная сеть,
     # сети, где UDP не ходит; по умолчанию решает openconnect.
@@ -1827,6 +1842,7 @@ build_spec() { # cookie → stdin для tunnel-start
     esac
     active_networks | sed 's/^/net /'
     active_zones    | sed 's/^/zone /'
+    printf 'dns-policy %s %s\n' "${P_DNS_MODE:-split}" "${P_DNS_SEARCH:-}"
 }
 
 parse_auth_result() { # строка authenticate → token, hash, post_url вызывающей функции
@@ -1840,6 +1856,7 @@ parse_auth_result() { # строка authenticate → token, hash, post_url вы
 }
 
 do_connect() { # профиль уже загружен
+    [ "${P_KIND:-tunnel}" != tunnel ] || require_dns_policy_helper
     if [ -n "${P_UPSTREAM:-}" ] && [ "${P_KIND:-tunnel}" = tunnel ] && [ "$DRY_RUN" != 1 ]; then
         helper_supports_upstream || die "UpstreamProxy: нужен ocmac-helper 0.8.3 или новее — sudo ocmac install"
     fi
@@ -2457,6 +2474,7 @@ cmd_status() {
             "$st" "$prof" "$dev" "$ip" "$since" "$gw" "$dns" "$url" "$mode" "$foreign" "$(sup_alive && echo 1 || echo 0)" "$(active_iface)"
         # Gateway suggestions are distinct from the profile's applied configuration.
         if [ "$kind" != proxy ] && [ "$st" = connected ]; then
+            printf 'gateway_dns_mode=%s\ngateway_dns_source=%s\ngateway_split_dns=%s\n' "$(env_get GW_DNS_MODE)" "$(env_get GW_DNS_SOURCE)" "$(env_get GW_SPLIT_DNS)"
             printf 'gateway_routes=%s\ngateway_domain=%s\ngateway_session=%s\n' \
                 "$(env_get GW_SPLIT_INC)" "$(env_get DEF_DOMAIN)" "$(head -1 "$TUN_STARTED" 2>/dev/null || true)"
         fi
@@ -2563,6 +2581,7 @@ cmd_setup_apply() (
     cp "$file" "$snapshot"
     [ "$(shasum -a 256 "$snapshot" | awk '{print $1}')" = "$digest" ] || die "Profile changed; reopen network suggestions"
     load_profile_file "$snapshot" "$profile"
+    require_dns_policy_helper
     setup_unchanged() {
         setup_session_matches "$profile" "$session" &&
         [ "$(shasum -a 256 "$file" | awk '{print $1}')" = "$digest" ]
@@ -2579,6 +2598,9 @@ cmd_setup_apply() (
         priv zone-add "$zone" "$dns" "${port:-53}"
     done <<< "$(active_zones)"
     setup_unchanged || die "VPN session changed; verify settings on the new connection"
+    if [ "${P_DNS_MODE:-split}" != split ] || [ -n "${P_DNS_SEARCH:-}" ] || [ -f "$STATE_DIR/dns-policy.state" ]; then
+        priv dns-policy "${P_DNS_MODE:-split}" "${P_DNS_SEARCH:-}"
+    fi
 )
 
 # ---------------------------------------------------------------- routes ----
@@ -2916,6 +2938,9 @@ cmd_export() {
                 else printf '%-24s = %s %s\n' "$z" "$d" "$pt"; fi
             fi
         done
+        if [ "${P_DNS_MODE:-split}" != split ] || [ -n "${P_DNS_SEARCH:-}" ]; then
+            printf '\n[DNSPolicy]\nMode = %s\nSearchDomain = %s\n' "${P_DNS_MODE:-split}" "${P_DNS_SEARCH:-}"
+        fi
         printf '\n[Auth]\n'
         if [ "${P_PASSWORD:-keychain}" != keychain ]; then printf 'Password        = %s\n' "$P_PASSWORD"; fi
         if [ -n "${P_PW_CMD:-}" ]; then printf 'PasswordCommand = %s\n' "$P_PW_CMD"; fi

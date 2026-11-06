@@ -26,7 +26,7 @@ def cases():
             result.append((f'{lang}-detail-{detail}', lang, theme, 'advanced', detail, 'normal', []))
         for detail in ['components', 'files', 'licenses']:
             result.append((f'{lang}-about-{detail}', lang, theme, 'about', '', 'normal', ['--about-detail', detail]))
-        for step, state in [(0, 'empty'), (0, 'proxy'), (1, 'ready'), (2, 'ready'), (3, 'dns'), (3, 'empty')]:
+        for step, state in [(0, 'empty'), (0, 'proxy'), (1, 'ready'), (2, 'ready'), (3, 'dns'), (3, 'all'), (3, 'unknown'), (3, 'empty')]:
             result.append((f'{lang}-setup-{step}-{state}', lang, theme, 'connection', '', 'normal',
                            ['--review-screen', 'setup', '--step', str(step), '--setup-state', state]))
         result.append((f'{lang}-setup-connected', lang, theme, 'connection', '', 'normal',

@@ -74,6 +74,9 @@ struct Status: Equatable {
     var dns: [String] = []
     var gatewayRoutes: [String] = []
     var gatewayDomain = ""
+    var gatewayDNSMode = ""
+    var gatewayDNSSource = ""
+    var gatewaySplitDNS: [String] = []
     var gatewaySession = ""
     var url = ""
     var mode = ""
@@ -145,6 +148,9 @@ struct Status: Equatable {
         s.dns = w.dns ?? []
         s.gatewayRoutes = w.gateway_routes ?? []
         s.gatewayDomain = w.gateway_domain ?? ""
+        s.gatewayDNSMode = w.gateway_dns_mode ?? ""
+        s.gatewayDNSSource = w.gateway_dns_source ?? ""
+        s.gatewaySplitDNS = w.gateway_split_dns ?? []
         s.gatewaySession = w.gateway_session ?? ""
         s.url = w.url ?? ""
         s.mode = w.mode ?? ""
@@ -199,6 +205,9 @@ struct Status: Equatable {
         var dns: [String]?
         var gateway_routes: [String]?
         var gateway_domain: String?
+        var gateway_dns_mode: String?
+        var gateway_dns_source: String?
+        var gateway_split_dns: [String]?
         var gateway_session: String?
         var url: String?
         var mode: String?

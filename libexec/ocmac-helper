@@ -31,7 +31,8 @@
 #   dns-apply            stdin: "<зона> <dns> [порт]" — применить зоны, снять свои лишние
 #   zone-add <зона> <dns|vpn> [порт]   добавить зону в список и применить
 #   zone-del <зона>      убрать зону из списка и снять
-#   dns-clear            снять только свои зоны
+#   dns-policy <split|all> [search-domain]   отдельная политика DNS шлюза
+#   dns-clear            снять только свои зоны и политику DNS
 #   socks-set <сервис> <порт>   системный SOCKS 127.0.0.1:<порт> на сетевом сервисе
 #                        (адрес не аргумент; чужой SOCKS не перезаписывается)
 #   socks-clear <сервис> снять системный SOCKS, если ставили мы (socks.state)
@@ -54,7 +55,7 @@ PATH="/usr/bin:/bin:/usr/sbin:/sbin"
 export LC_CTYPE="${LC_CTYPE:-UTF-8}"
 umask 022
 
-VERSION="0.9.0"
+VERSION="0.10.0"
 PREFIX="/usr/local"
 LIBDIR="$PREFIX/libexec/ocmac"
 # Манифест доверия — рядом с копией openconnect, в root-овом каталоге.
@@ -100,6 +101,10 @@ if [ "${1:-}" = "--dry-run" ]; then
     fi
 fi
 
+DNS_POLICY="$STATE_DIR/dns-policy.wanted"
+DNS_APPLIED="$STATE_DIR/dns-policy.state"
+DNS_ROUTES="$STATE_DIR/dns-routes.state"
+DNS_KEY="State:/Network/Service/8A93E041-0653-4CD8-AD64-C88DCD78A0BA/DNS"
 MANIFEST="$STATE_DIR/zones.state"       # наши файлы в /etc/resolver
 TUNNEL_ENV="$STATE_DIR/tunnel.env"      # что сказал шлюз, какой utun
 PIDFILE="$STATE_DIR/openconnect.pid"
@@ -112,7 +117,7 @@ SOCKS_STATE="$STATE_DIR/socks.state"       # системный SOCKS, кото�
 LOG="$STATE_DIR/openconnect.log"
 LOCK="$STATE_DIR/lock"                     # каталог-замок: внутри pid владельца
 # Что переносит migrate-state — фиксированный список, не маска.
-STATE_FILES="tunnel.env openconnect.pid zones.state zones.wanted routes.state routes.wanted gateway.route paused socks.state openconnect.log openconnect.log.1"
+STATE_FILES="dns-policy.wanted dns-policy.state dns-routes.state tunnel.env openconnect.pid zones.state zones.wanted routes.state routes.wanted gateway.route paused socks.state openconnect.log openconnect.log.1"
 
 # ------------------------------------------------------------------ вывод ----
 # Из vpnc-скрипта (его зовёт openconnect, переменная reason задана) строка
@@ -604,6 +609,81 @@ clear_zones() {
     flush_dns
 }
 
+# Mode and search suffix are separate from per-domain resolver entries.
+valid_dns_policy() {
+    case "${1:-}" in split|all) ;; *) return 1 ;; esac
+    [ -z "${2:-}" ] || valid_zone "$2"
+}
+dns_scutil() {
+    local script="$1" result
+    if [ "$DRY_RUN" = 1 ]; then printf '[dry-run] scutil\n%s\n' "$script"; return 0; fi
+    result=$(printf '%s\n' "$script" | scutil) || return 1
+    result=$(printf '%s' "$result" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    case "$result" in ''|'No such key') return 0 ;; *) say "scutil DNS: $result"; return 1 ;; esac
+}
+clear_policy_dns() {
+    if [ -f "$DNS_APPLIED" ]; then
+        dns_scutil "remove $DNS_KEY" || return 1
+        rm -f "$DNS_APPLIED"
+    fi
+    if [ -f "$DNS_ROUTES" ]; then
+        local ROUTES_STATE="$DNS_ROUTES" net dev
+        while read -r net dev; do
+            # A host route explicitly selected by the user now belongs to routes.wanted.
+            grep -Fxq "$net" "$ROUTES_WANTED" 2>/dev/null || del_route "$net" "$dev"
+        done < "$DNS_ROUTES"
+        rm -f "$DNS_ROUTES"
+    fi
+}
+apply_policy_dns() {
+    local mode=split suffix="" servers="" ip dev script key
+    if [ -f "$DNS_POLICY" ]; then read -r mode suffix < "$DNS_POLICY" || true; fi
+    valid_dns_policy "$mode" "$suffix" || die "invalid DNS policy"
+    clear_policy_dns || die "previous DNS policy could not be cleared"
+    [ "$mode" = all ] || [ -n "$suffix" ] || return 0
+    dev=$(tunnel_dev); valid_utun "$dev" || die "DNS policy requires a tunnel"
+    # DNS servers are data, never scutil commands. Keep all valid IPv4 servers.
+    for ip in $(sed -n 's/^DNS=//p' "$TUNNEL_ENV" 2>/dev/null | head -1); do
+        valid_ip "$ip" || continue
+        servers="$servers $ip"
+    done
+    [ -n "$servers" ] || die "gateway supplied no usable DNS servers"
+    # Do not overwrite a pre-existing dynamic-store entry that we do not own.
+    if [ "$DRY_RUN" != 1 ]; then
+        key=$(printf 'show %s\n' "$DNS_KEY" | scutil | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        [ "$key" = 'No such key' ] || die "DNS service key already exists; refusing to replace it"
+    fi
+    for ip in $servers; do
+        if [ "$(route_dev_exact "$ip/32")" != "$dev" ]; then
+            local ROUTES_STATE="$DNS_ROUTES"
+            add_route "$ip/32" "$dev"
+            [ "$DRY_RUN" = 1 ] || [ "$(route_dev_exact "$ip/32")" = "$dev" ] || { clear_policy_dns; die "DNS server is not reachable through the tunnel"; }
+        fi
+    done
+    script=$(printf 'd.init\nd.add ServerAddresses *%s\nd.add SearchOrder # 100000\n' "$servers")
+    # Empty match = default resolver. Include the search suffix as a nonempty
+    # match as well: configd drops SearchDomains while expanding supplementals.
+    if [ "$mode" = all ]; then script="$script"$'\n''d.add SupplementalMatchDomains * ""'"${suffix:+ $suffix}"
+    else script="$script"$'\n'"d.add SupplementalMatchDomains * $suffix"; fi
+    script="$script"$'\n'"set $DNS_KEY"
+    printf '%s %s\n' "$mode" "$suffix" > "$DNS_APPLIED"
+    if ! dns_scutil "$script"; then clear_policy_dns; die "DNS policy could not be applied"; fi
+    flush_dns
+}
+# Capture only DNS metadata, not the complete CSTP options (may contain secrets).
+gateway_dns_metadata() {
+    local domains="" domain mode=unknown source=missing all
+    for domain in $(printf '%s' "${CISCO_SPLIT_DNS:-}" | tr ',;' '  '); do
+        valid_zone "$domain" && domains="$domains $domain"
+    done
+    all=$(printf '%s\n' "${CISCO_CSTP_OPTIONS:-}" | awk -F= 'tolower($1)=="x-cstp-tunnel-all-dns" {print tolower($2); exit}')
+    if [ "$all" = true ]; then mode=all; source=explicit
+    elif [ -n "$domains" ]; then mode=split; source=split-list
+    elif [ -n "${CISCO_SPLIT_DNS:-}" ]; then mode=unknown; source=invalid-split-list
+    elif [ -n "${INTERNAL_IP4_DNS:-}" ]; then mode=all; source=no-split-list; fi
+    printf 'GW_DNS_MODE=%s\nGW_DNS_SOURCE=%s\nGW_SPLIT_DNS=%s\n' "$mode" "$source" "${domains# }"
+}
+
 # Строка зоны из spec или аргументов → "<зона> <dns|vpn> <порт>" или отказ.
 zone_line() { # зона dns [порт] [лишнее]
     local z="${1:-}" d="${2:-vpn}" p="${3:-53}"
@@ -651,7 +731,7 @@ cmd_tunnel_start() {
     # stdin: cookie и списки. Cookie не должна попасть ни в argv, ни в лог.
     # Сети и зоны проверяются ДО записи: в файл состояния попадает только то,
     # что прошло валидацию.
-    local cookie="" line rest nets="" zones="" zl z d p extra mtu="" nodtls=0 upstream=""
+    local cookie="" line rest nets="" zones="" dns_mode=split dns_suffix="" zl z d p extra mtu="" nodtls=0 upstream=""
     while IFS= read -r line; do
         case "$line" in
             cookie=*) cookie="${line#cookie=}" ;;
@@ -662,6 +742,8 @@ cmd_tunnel_start() {
                       if plain "$rest" && zl=$(zone_line "${z:-}" "${d:-vpn}" "${p:-53}" "${extra:-}"); then
                           zones="$zones$zl"$'\n'
                       else say "пропускаю зону: $(clean "$rest")"; fi ;;
+            "dns-policy "*) read -r dns_mode dns_suffix extra <<< "${line#dns-policy }" || true
+                            [ -z "${extra:-}" ] && valid_dns_policy "$dns_mode" "$dns_suffix" || die "invalid DNS policy" ;;
             "mtu "*)  rest="${line#mtu }"
                       # Вложенный VPN и мобильная сеть: большие пакеты не
                       # проходят, а маленькие идут — лечится MTU в профиле.
@@ -681,6 +763,7 @@ cmd_tunnel_start() {
     [ "${OCMAC_KEEP_PAUSE:-0}" = 1 ] || rm -f "$PAUSED"
     printf '%s' "$nets"  > "$ROUTES_WANTED"
     printf '%s' "$zones" > "$ZONES_WANTED"
+    printf '%s %s\n' "$dns_mode" "$dns_suffix" > "$DNS_POLICY"
     rm -f "$ROUTES_STATE" "$GW_ROUTE"
 
     local oc; oc=$(verify_trust)
@@ -784,7 +867,7 @@ self_path() { printf '%s' "$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"; }
 # openconnect зовёт нас с окружением: reason, TUNDEV, INTERNAL_IP4_ADDRESS,
 # INTERNAL_IP4_MTU, INTERNAL_IP4_DNS, CISCO_DEF_DOMAIN, CISCO_SPLIT_INC_*,
 # VPNGATEWAY. Делаем ТОЛЬКО интерфейс, свои маршруты и свои зоны. Никакого
-# OverridePrimary и networksetup -setdnsservers. Всё от шлюза проверяется:
+# OverridePrimary и networksetup -setdnsservers. DNS policy — свой dynamic-store ключ. Всё от шлюза проверяется:
 # ни одно значение не уходит в ifconfig и tunnel.env как есть.
 IN_VPNC=0
 vpnc_connect() {
@@ -845,6 +928,7 @@ vpnc_connect() {
         printf 'STATE=applying\nREASON=%s\nTUNDEV=%s\nIP4=%s\nMTU=%s\nGATEWAY=%s\nDNS=%s\nDEF_DOMAIN=%s\nGW_SPLIT_INC=%s\nCONNECTED=%s\n' \
             "$(clean "${reason:-}")" "$dev" "$ip" "$mtu" "$(clean "${VPNGATEWAY:-}")" "$(clean "${INTERNAL_IP4_DNS:-}")" \
             "$(clean "${CISCO_DEF_DOMAIN:-}")" "${inc# }" "$(date +%s)"
+        gateway_dns_metadata
         [ -f "$TUNNEL_ENV" ] && grep -E '^(MODE|URL|STARTED)=' "$TUNNEL_ENV" || true
     } > "$TUNNEL_ENV.tmp"
     mv "$TUNNEL_ENV.tmp" "$TUNNEL_ENV"; chmod 644 "$TUNNEL_ENV"
@@ -860,6 +944,7 @@ vpnc_connect() {
     apply_wanted_routes "$dev"
 
     apply_wanted_zones
+    apply_policy_dns
     tunnel_env_state connected
     say "маршруты и зоны применены — туннель готов"
 }
@@ -873,6 +958,7 @@ tunnel_env_state() { # состояние
 }
 
 vpnc_disconnect() {
+    clear_policy_dns
     clear_state_routes
     if [ -f "$GW_ROUTE" ]; then
         local g via now; read -r g via _ < "$GW_ROUTE" || true
@@ -934,6 +1020,7 @@ cmd_vpnc() {
 cmd_suspend() {
     tunnel_alive || die "туннель не поднят — паузить нечего"
     if [ -f "$PAUSED" ]; then say "уже на паузе"; return 0; fi
+    clear_policy_dns
     clear_state_routes
     [ "$(manifest_zones | grep -c .)" -gt 0 ] && clear_zones || flush_dns
     : > "$PAUSED"
@@ -956,6 +1043,7 @@ cmd_resume() {
     valid_utun "$dev" || die "не знаю интерфейс туннеля (нет TUNDEV в $TUNNEL_ENV)"
     apply_wanted_routes "$dev"
     apply_wanted_zones
+    apply_policy_dns
     rm -f "$PAUSED"
     say "возобновлено: маршруты и зоны на месте"
 }
@@ -1038,7 +1126,7 @@ cmd_socks_clear() {
 # --------------------------------------------------------------- cleanup ----
 # DNS сетевых сервисов здесь не трогаем. Раньше cleanup стирал весь список
 # серверов сервиса, если среди них был 127.0.0.1 и порт 53 молчал, — наследие
-# 0.1.0. ocmac системный DNS не ставит никогда (только /etc/resolver), значит,
+# 0.1.0. ocmac не меняет DNS сетевых сервисов (свой dynamic-store ключ удаляется отдельно), значит,
 # 127.0.0.1 там поставил кто-то другой, и снимать его — не наше дело. doctor
 # об этом предупреждает и говорит, как сбросить руками.
 cmd_cleanup() {
@@ -1050,6 +1138,7 @@ cmd_cleanup() {
     if [ -n "$(stray_pids)" ]; then stop_strays; did=1; fi
     state_lock_or_die
     if ! tunnel_alive; then
+        if [ -f "$DNS_APPLIED" ] || [ -f "$DNS_ROUTES" ]; then clear_policy_dns; did=1; fi
         if [ "$(manifest_zones | grep -c .)" -gt 0 ]; then clear_zones; did=1; fi
         if [ -s "$ROUTES_STATE" ]; then clear_state_routes; did=1; fi
         if [ -f "$GW_ROUTE" ]; then vpnc_disconnect; did=1; fi
@@ -1119,7 +1208,7 @@ esac
 # Меняющие команды — под замком. tunnel-start, tunnel-stop, cleanup и vpnc
 # берут его сами: им нельзя держать замок, пока выходит openconnect.
 case "$cmd" in
-    suspend|resume|route-add|route-del|zone-add|zone-del|dns-apply|dns-clear|socks-set|socks-clear)
+    suspend|resume|route-add|route-del|zone-add|zone-del|dns-apply|dns-clear|dns-policy|socks-set|socks-clear)
         state_lock_or_die ;;
 esac
 case "$cmd" in
@@ -1176,8 +1265,14 @@ case "$cmd" in
         say "зона убрана из списка: $1"
         [ -f "$PAUSED" ] && exit 0
         apply_wanted_zones ;;
+    dns-policy)
+        valid_dns_policy "${1:-}" "${2:-}" && [ "$#" -le 2 ] || die "dns-policy split|all [search-domain]"
+        ensure_state_dir
+        [ "$(tunnel_state)" = connected ] || [ -f "$PAUSED" ] || die "DNS policy requires a connected tunnel"
+        printf '%s %s\n' "$1" "${2:-}" > "$DNS_POLICY"
+        [ -f "$PAUSED" ] || apply_policy_dns ;;
     dns-apply)    apply_zones ;;
-    dns-clear)    clear_zones ;;
+    dns-clear)    clear_policy_dns; clear_zones ;;
     socks-set)    cmd_socks_set "$@" ;;
     socks-clear)  cmd_socks_clear "$@" ;;
     cleanup)      cmd_cleanup ;;

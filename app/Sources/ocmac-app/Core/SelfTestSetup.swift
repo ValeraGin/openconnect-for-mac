@@ -89,6 +89,7 @@ extension SelfTest {
         live.gatewaySession = "123 456"; live.since = Date(timeIntervalSince1970: 123)
         live.gatewayRoutes = ["10.0.0.0/8", "10.20.0.0/16", "10.20.0.0/16", "0.0.0.0/0", "bad"]
         live.dns = ["10.20.0.53"]; live.gatewayDomain = "corp.example.com"
+        live.gatewayDNSMode = "split"; live.gatewayDNSSource = "split-list"; live.gatewaySplitDNS = ["corp.example.com"]
         var applies = 0
         let networks = SetupFlow(readiness: { _ in (ProfileSystemState(required: false, ready: true), true) }, connect: { _ in },
                                  status: { live }, apply: { profile, session, digest in
@@ -127,6 +128,19 @@ extension SelfTest {
         t.check("setup review detects concurrent profile edit", applies == 2 && ProfileStore.read(existing.fileName) == external)
         live.gatewayDomain = ""; live.gatewayRoutes = []; networks.review(live)
         t.check("setup does not infer DNS domain from VPN address", networks.proposedZones.isEmpty && networks.serverDNS == ["10.20.0.53"])
+        live.gatewayDomain = "search.example.com"; live.gatewaySplitDNS = []; live.gatewayDNSMode = "all"
+        networks.review(live)
+        let allDNS = networks.networkCandidate()
+        t.check("setup search suffix never becomes split restriction", networks.proposedZones.isEmpty && allDNS.dnsMode == "all" && allDNS.dnsSearchDomain == "search.example.com")
+        t.check("setup all DNS preserves explicit overrides", allDNS.zones.count == networks.doc.zones.count)
+        let roundtrip = ProfileDoc.parse(allDNS.render(), fileName: allDNS.fileName)
+        t.check("DNS policy roundtrips", roundtrip.dnsMode == "all" && roundtrip.dnsSearchDomain == "search.example.com")
+        live.gatewayDNSMode = ""; live.gatewayDNSSource = ""; networks.review(live)
+        t.check("old session never silently proposes global DNS", !networks.useDNS && networks.proposedZones.isEmpty)
+        networks.useDNS = true; networks.proposedDNSMode = "all"
+        t.check("old session permits explicit all DNS selection", networks.networkCandidate().dnsMode == "all")
+        live.dns = []; networks.review(live)
+        t.check("missing DNS cannot enable policy", !networks.useDNS)
         let parsed = Status.parse(json: "{\"gateway_routes\":[\"10.20.0.0/16\"],\"gateway_domain\":\"corp.example.com\",\"gateway_session\":\"123 456\"}")
         t.check("setup status wire carries real gateway suggestions", parsed?.gatewayRoutes == ["10.20.0.0/16"] && parsed?.gatewayDomain == "corp.example.com" && parsed?.gatewaySession == "123 456")
         t.check("setup initial config is not selected implicitly on restart", { flow.start(); return flow.doc.url.isEmpty && flow.savedID == nil }())

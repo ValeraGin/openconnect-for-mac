@@ -594,3 +594,23 @@
 "Длина кода" = "Code length";
 "Период" = "Period";
 "Ресурс" = "Resource";
+
+"Режим DNS должен быть split или all." = "DNS mode must be split or all.";
+
+"Некорректный поисковый суффикс DNS." = "Invalid DNS search suffix.";
+
+"Все домены" = "All domains";
+
+"Выбранные домены" = "Selected domains";
+
+"Домены через VPN DNS" = "Domains using VPN DNS";
+
+"Поисковый суффикс" = "Search suffix";
+
+"Поисковый суффикс: %@" = "Search suffix: %@";
+
+"Сервер не ограничил DNS доменами. Предлагаем все домены." = "The server did not restrict DNS to specific domains. All domains are suggested.";
+
+"DNS-политика этой сессии неизвестна. Переподключитесь или выберите режим вручную." = "This session’s DNS policy is unknown. Reconnect or choose a mode manually.";
+
+"Суффикс дополняет короткие имена. Он не ограничивает режим «Все домены». Изменения вступят в силу при следующем подключении." = "The suffix completes short names. It does not restrict All domains mode. Changes take effect on the next connection.";

@@ -141,14 +141,23 @@ struct SetupView: View {
                 }
             }
             HStack {
-                Toggle("DNS", isOn: $flow.useDNS).frame(width: 100, alignment: .leading).disabled(flow.proposedZones.isEmpty)
-                Text(flow.proposedZones.first?.zone ?? L("Не предложены")).font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
-                Spacer(minLength: 0)
-                Button(L("Изменить…")) { editor = .dns }
+                Toggle("DNS", isOn: $flow.useDNS).frame(width: 100, alignment: .leading).disabled(flow.serverDNS.isEmpty)
+                Picker(L("Домены через VPN DNS"), selection: $flow.proposedDNSMode) {
+                    Text(L("Все домены")).tag("all")
+                    Text(L("Выбранные домены")).tag("split")
+                }.labelsHidden().disabled(!flow.useDNS)
+                if flow.proposedDNSMode == "split" {
+                    Button(L("Изменить…")) { editor = .dns }.disabled(!flow.useDNS)
+                }
             }
-            if !flow.serverDNS.isEmpty { hint(L("DNS сервера: %@", flow.serverDNS.joined(separator: ", "))) }
+            if !flow.serverDNS.isEmpty {
+                hint(L("DNS сервера: %@", flow.serverDNS.joined(separator: ", ")))
+                if !flow.proposedSearchDomain.isEmpty { hint(L("Поисковый суффикс: %@", flow.proposedSearchDomain)) }
+                if flow.dnsPolicySource == "no-split-list" { hint(L("Сервер не ограничил DNS доменами. Предлагаем все домены.")) }
+                else if !["explicit", "split-list"].contains(flow.dnsPolicySource) { hint(L("DNS-политика этой сессии неизвестна. Переподключитесь или выберите режим вручную.")) }
+            }
             if flow.offeredFullTunnel { hint(L("Сервер предложил широкие маршруты. Весь трафик включается только вашим выбором.")) }
-            else if flow.proposedRoutes.isEmpty && flow.proposedZones.isEmpty { hint(L("Новых подсетей и DNS-зон нет. Можно добавить вручную или пропустить.")) }
+            else if flow.proposedRoutes.isEmpty && flow.serverDNS.isEmpty { hint(L("Новых подсетей и DNS-зон нет. Можно добавить вручную или пропустить.")) }
         }
     }
     private var system: some View {
@@ -271,7 +280,7 @@ private struct SetupNetworkEditor: View {
             flow.proposedRoutes = values; flow.useRoutes = !values.isEmpty
         } else {
             guard zones.allSatisfy({ ProfileCheck.validZone($0.zone) && ($0.resolver == "vpn" || ProfileCheck.validIP($0.resolver)) && ($0.port.isEmpty || ProfileCheck.validPort($0.port)) }) else { invalid = true; return }
-            flow.proposedZones = zones; flow.useDNS = !zones.isEmpty
+            flow.proposedZones = zones; flow.useDNS = !flow.serverDNS.isEmpty
         }
         dismiss()
     }

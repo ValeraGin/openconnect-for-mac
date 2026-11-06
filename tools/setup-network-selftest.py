@@ -23,13 +23,13 @@ def main():
             session = f'{process.pid} 123456'
             (state / 'openconnect.pid').write_text(str(process.pid))
             (state / 'openconnect.started').write_text(session)
-            (state / 'tunnel.env').write_text('STATE=connected\nTUNDEV=utun999\nCONNECTED=123456\nMODE=split\nIP4=10.9.0.2\nDNS=10.20.0.53 10.20.0.54\nDEF_DOMAIN=corp.example.com\nGW_SPLIT_INC=10.20.0.0/16 192.168.50.0/24\n')
+            (state / 'tunnel.env').write_text('STATE=connected\nTUNDEV=utun999\nCONNECTED=123456\nMODE=split\nIP4=10.9.0.2\nDNS=10.20.0.53 10.20.0.54\nDEF_DOMAIN=search.example.com\nGW_DNS_MODE=all\nGW_DNS_SOURCE=no-split-list\nGW_SPLIT_DNS=corp.example.com apps.example.com\nGW_SPLIT_INC=10.20.0.0/16 192.168.50.0/24\n')
             (user / 'desired').write_text('test')
             profile = config / 'profiles/test.ocmac'
             profile.write_text('[Connection]\nUrl = vpn.example.test\nMode = tunnel\n[Routes]\n10.20.0.0/16\n192.168.50.0/24\n[DNS]\ncorp.example.com = vpn 5353\n')
             digest = hashlib.sha256(profile.read_bytes()).hexdigest()
             log = base / 'helper.log'; helper = base / 'helper'
-            helper.write_text('#!/bin/bash\nprintf "%s\\n" "$*" >> "$TEST_LOG"\nif [ "${TEST_SWITCH:-}" = 1 ]; then printf changed > "$OCMAC_STATE_DIR/openconnect.started"; fi\n')
+            helper.write_text('#!/bin/bash\nif [ "$1" = version ]; then echo "ocmac-helper ${TEST_VERSION:-0.10.0}"; exit 0; fi\nprintf "%s\\n" "$*" >> "$TEST_LOG"\nif [ "${TEST_SWITCH:-}" = 1 ]; then printf changed > "$OCMAC_STATE_DIR/openconnect.started"; fi\n')
             helper.chmod(0o755)
             env = {k: v for k, v in os.environ.items() if not k.startswith('OCMAC_')}
             env.update(OCMAC_CONFIG_DIR=str(config), OCMAC_USER_STATE=str(user), OCMAC_STATE_DIR=str(state),
@@ -41,7 +41,9 @@ def main():
             status = json.loads(r.stdout)
             assert status['state'] == 'connected', status['state']
             assert status['gateway_routes'] == ['10.20.0.0/16', '192.168.50.0/24']
-            assert status['gateway_domain'] == 'corp.example.com' and status['gateway_session'] == session
+            assert status['gateway_domain'] == 'search.example.com' and status['gateway_session'] == session
+            assert status['gateway_dns_mode'] == 'all' and status['gateway_dns_source'] == 'no-split-list'
+            assert status['gateway_split_dns'] == ['corp.example.com', 'apps.example.com']
             assert status['dns'] == ['10.20.0.53', '10.20.0.54']
             assert not log.exists(), 'status must not invoke helper'
             for args in [('other', session, digest), ('test', 'stale', digest), ('test', session, 'wrong')]:
@@ -58,7 +60,18 @@ def main():
             (user / 'routes.disabled').unlink(); (user / 'zones.disabled').unlink()
             assert run('setup-apply', 'test', session, digest, extra={'TEST_SWITCH': '1'}).returncode != 0
             assert log.read_text().splitlines() == ['route-add 10.20.0.0/16'], 'stop after session switch'
-            (state / 'openconnect.started').write_text(session); (state / 'paused').touch(); log.unlink()
+            (state / 'openconnect.started').write_text(session); log.unlink()
+            profile.write_text(profile.read_text() + '[DNSPolicy]\nMode = all\nSearchDomain = search.example.com\n')
+            digest = hashlib.sha256(profile.read_bytes()).hexdigest()
+            assert run('setup-apply', 'test', session, digest, extra={'TEST_VERSION': '0.9.0'}).returncode != 0
+            assert not log.exists(), 'old helper must be rejected before any changes'
+            r = run('setup-apply', 'test', session, digest); assert r.returncode == 0, r.stderr
+            assert log.read_text().splitlines()[-1] == 'dns-policy all search.example.com'
+            exported = run('export', 'test'); assert exported.returncode == 0, exported.stderr
+            assert '[DNSPolicy]\nMode = all\nSearchDomain = search.example.com' in exported.stdout
+            profile.write_text(profile.read_text().replace('Mode = all', 'Mode = invalid'))
+            assert run('_check-profile', 'test').returncode != 0
+            (state / 'paused').touch(); log.unlink()
             assert run('setup-apply', 'test', session, digest).returncode != 0 and not log.exists()
             print('PASS: gateway fields reach JSON; no implicit apply; stale session/profile/digest rejected; selected config applied; disabled entries preserved; mid-apply session switch stops; pause rejected')
         finally:

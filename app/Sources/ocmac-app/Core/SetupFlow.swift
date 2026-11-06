@@ -19,6 +19,9 @@ final class SetupFlow: ObservableObject {
     @Published var proposedZones: [ZoneLine] = []
     @Published var useRoutes = true
     @Published var useDNS = true
+    @Published var proposedDNSMode = "split"
+    @Published private(set) var proposedSearchDomain = ""
+    @Published private(set) var dnsPolicySource = ""
     @Published var fullTunnel = false
     @Published private(set) var serverDNS: [String] = []
     @Published private(set) var offeredFullTunnel = false
@@ -55,6 +58,7 @@ final class SetupFlow: ObservableObject {
         guard !busy && !checking else { return }
         awaitingConnection = false; reviewedSession = nil; networksReviewed = false
         proposedRoutes = []; proposedZones = []; serverDNS = []; fullTunnel = false; offeredFullTunnel = false
+        proposedDNSMode = "split"; proposedSearchDomain = ""; dnsPolicySource = ""
         generation = UUID(); doc = ProfileDoc(); stamp = nil
         step = .profile; system = nil; helperReady = false; includesSystem = false; note = nil
         if let profile {
@@ -205,10 +209,15 @@ final class SetupFlow: ObservableObject {
             ProfileCheck.validCIDR($0) && (ProfileCheck.prefixLength($0) ?? 0) >= 8 && seen.insert($0).inserted
         }
         let domain = status.gatewayDomain.trimmed
-        proposedZones = !serverDNS.isEmpty && ProfileCheck.validZone(domain)
-            && !doc.zones.contains(where: { $0.zone.lowercased() == domain.lowercased() })
-            ? [ZoneLine(zone: domain, resolver: "vpn", port: "53")] : []
-        useRoutes = !proposedRoutes.isEmpty; useDNS = !proposedZones.isEmpty
+        proposedSearchDomain = ProfileCheck.validZone(domain) ? domain : ""
+        dnsPolicySource = status.gatewayDNSSource
+        proposedDNSMode = status.gatewayDNSMode == "all" ? "all" : "split"
+        var domains = Set(doc.zones.map { $0.zone.lowercased() })
+        proposedZones = serverDNS.isEmpty ? [] : status.gatewaySplitDNS.filter {
+            ProfileCheck.validZone($0) && domains.insert($0.lowercased()).inserted
+        }.map { ZoneLine(zone: $0, resolver: "vpn", port: "53") }
+        useRoutes = !proposedRoutes.isEmpty
+        useDNS = !serverDNS.isEmpty && ["all", "split"].contains(status.gatewayDNSMode)
         step = .network
     }
 
@@ -223,8 +232,12 @@ final class SetupFlow: ObservableObject {
         let added = fullTunnel ? ["0.0.0.0/1", "128.0.0.0/1"] : useRoutes ? proposedRoutes : []
         for net in added where known.insert(net).inserted { candidate.routes.append(net) }
         if useDNS {
+            candidate.dnsMode = proposedDNSMode
+            candidate.dnsSearchDomain = proposedSearchDomain
             var domains = Set(candidate.zones.map { $0.zone.lowercased() })
-            for zone in proposedZones where domains.insert(zone.zone.lowercased()).inserted { candidate.zones.append(zone) }
+            if proposedDNSMode == "split" {
+                for zone in proposedZones where domains.insert(zone.zone.lowercased()).inserted { candidate.zones.append(zone) }
+            }
         }
         return candidate
     }
@@ -280,6 +293,11 @@ final class SetupFlow: ObservableObject {
             proposedZones = state == "empty" ? [] : [ZoneLine(zone: "corp.example.com", resolver: "vpn", port: "53")]
             serverDNS = ["10.20.0.53"]; useRoutes = !proposedRoutes.isEmpty; useDNS = !proposedZones.isEmpty
             offeredFullTunnel = state == "all"
+            proposedDNSMode = state == "all" ? "all" : "split"
+            proposedSearchDomain = "corp.example.com"
+            dnsPolicySource = state == "all" ? "no-split-list" : "split-list"
+            if state == "unknown" { dnsPolicySource = ""; useDNS = false }
+            if state == "empty" { serverDNS = []; proposedSearchDomain = "" }
         }
         includesSystem = step == 1
         helperReady = state == "ready"

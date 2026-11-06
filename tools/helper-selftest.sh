@@ -499,6 +499,38 @@ check 16 "брошенный замок (владелец умер) снимае
 fresh; H_ zone-add b.test vpn
 check контроль "после команды замка не остаётся" all rc0 '[ ! -d "$ST/lock" ]'
 
+# DNS policy: synthetic metadata and lifecycle. Never touch macOS DNS.
+fresh
+Henv reason=connect TUNDEV=utun9 INTERNAL_IP4_ADDRESS=10.9.0.2 INTERNAL_IP4_DNS="10.0.0.53 10.0.0.54" CISCO_DEF_DOMAIN=search.test "$H" --dry-run vpnc
+check DNS "search suffix does not imply split DNS" all rc0 'fline "$ST/tunnel.env" GW_DNS_MODE=all' 'fline "$ST/tunnel.env" GW_DNS_SOURCE=no-split-list' 'hasnt "set State:/Network"'
+Henv reason=connect TUNDEV=utun9 INTERNAL_IP4_ADDRESS=10.9.0.2 INTERNAL_IP4_DNS=10.0.0.53 CISCO_SPLIT_DNS="corp.test,apps.test" "$H" --dry-run vpnc
+check DNS "comma-separated split domains survive independently" all rc0 'fline "$ST/tunnel.env" GW_DNS_MODE=split' 'fline "$ST/tunnel.env" "GW_SPLIT_DNS=corp.test apps.test"'
+Henv reason=connect TUNDEV=utun9 INTERNAL_IP4_ADDRESS=10.9.0.2 INTERNAL_IP4_DNS=10.0.0.53 CISCO_SPLIT_DNS=corp.test CISCO_CSTP_OPTIONS=X-CSTP-Tunnel-All-DNS=true "$H" --dry-run vpnc
+check DNS "explicit tunnel-all overrides split list" all rc0 'fline "$ST/tunnel.env" GW_DNS_MODE=all' 'fline "$ST/tunnel.env" GW_DNS_SOURCE=explicit'
+Henv reason=connect TUNDEV=utun9 INTERNAL_IP4_ADDRESS=10.9.0.2 INTERNAL_IP4_DNS=10.0.0.53 CISCO_SPLIT_DNS='bad"' "$H" --dry-run vpnc
+check DNS "invalid list does not imply global DNS" all rc0 'fline "$ST/tunnel.env" GW_DNS_MODE=unknown'
+printf 'STATE=connected\nTUNDEV=utun9\nDNS=10.0.0.53 10.0.0.54\n' > "$ST/tunnel.env"
+H_ dns-policy all search.test
+check DNS "explicit all mode uses both servers and empty default match" all rc0 'has "d.add ServerAddresses * 10.0.0.53 10.0.0.54"' 'has "d.add SupplementalMatchDomains"' 'fline "$ST/dns-policy.state" "all search.test"' 'fline "$ST/dns-routes.state" "10.0.0.54/32 utun9"'
+H_ dns-policy split
+check DNS "switch to split removes only our dynamic-store service" all rc0 'has "remove State:/Network/Service/8A93E041-0653-4CD8-AD64-C88DCD78A0BA/DNS"' '[ ! -f "$ST/dns-policy.state" ]' '[ ! -f "$ST/dns-routes.state" ]' 'hasnt networksetup'
+H_ dns-policy all 'bad"'
+check DNS "suffix command injection rejected" rcbad
+H_ dns-policy all search.test
+Henv reason=disconnect TUNDEV=utun9 "$H" --dry-run vpnc
+check DNS "disconnect removes global DNS and retains wanted choice" all rc0 'has "remove State:/Network"' '[ ! -f "$ST/dns-policy.state" ]' 'fline "$ST/dns-policy.wanted" "all search.test"'
+Henv reason=connect TUNDEV=utun10 INTERNAL_IP4_ADDRESS=10.9.0.2 INTERNAL_IP4_DNS=10.0.0.99 "$H" --dry-run vpnc
+check DNS "reconnect uses new server and interface" all rc0 'has "d.add ServerAddresses * 10.0.0.99"' 'fline "$ST/dns-routes.state" "10.0.0.99/32 utun10"'
+A=$(fake_oc "$ST/openconnect.pid"); BG="$BG $A"; sleep 0.3
+echo "$A" > "$ST/openconnect.pid"; stamp "$A"
+H_ suspend
+check DNS "pause clears default DNS" all rc0 '[ ! -f "$ST/dns-policy.state" ]' 'has "remove State:/Network"'
+H_ resume
+check DNS "resume restores selected DNS" all rc0 'fline "$ST/dns-policy.state" "all search.test"' 'has "d.add ServerAddresses * 10.0.0.99"'
+fresh
+Hin $'cookie=x\ndns-policy all search.test\n' tunnel-start vpn.example.com "$HASH" split user
+check DNS "spec persists policy separately from traffic mode" all rc0 'fline "$ST/dns-policy.wanted" "all search.test"'
+
 # ------------------------------------------------------------- контроль ----
 fresh
 Hin $'cookie=x\nnet 10.1.0.0/16\nzone corp.test vpn\n' tunnel-start vpn.example.com "$HASH" split user "Mozilla/5.0 (Macintosh)"
@@ -512,6 +544,41 @@ fresh; printf 'corp.test vpn 53\n' > "$ST/zones.wanted"
 H_ zone-del corp.test
 check контроль "zone-del убирает саму зону" all rc0 'fnoline "$ST/zones.wanted" "corp.test vpn 53"'
 check контроль "ни одна заглушка не вызвана с меняющей командой" '[' ! -s "$SD/CALLED" ']'
+
+# Execute scutil control flow against a stub, including macOS's indented
+# "No such key" output. Every system-writing command remains stubbed.
+cat > "$STUB/scutil" <<EOF
+#!/bin/bash
+script=\$(cat)
+printf '%s\n' "\$script" >> "$SD/scutil-calls"
+case "\$script" in
+  show*) [ -f "$SD/scutil-present" ] && echo '<dictionary> {}' || echo '  No such key' ;;
+  remove*) rm -f "$SD/scutil-present" ;;
+  *) if [ -f "$SD/scutil-fail" ]; then echo 'Permission denied'; else touch "$SD/scutil-present"; fi ;;
+esac
+EOF
+chmod 755 "$STUB/scutil"
+# This last test copy writes only inside T and uses stubs for every system
+# command. Directory ownership was tested above; allow temporary user-owned
+# fixtures here to exercise the non-dry-run scutil error paths without root.
+sed -e 's/^require_secure_dirs() {/require_secure_dirs() { return 0;/' \
+    -e "s|^STATE_DIR=\"/var/db/ocmac\"\$|STATE_DIR=\"$ST\"|" "$H" > "$T/scutil-helper"
+grep -Fxq "STATE_DIR=\"$ST\"" "$T/scutil-helper" || exit 2
+H="$T/scutil-helper"; chmod 755 "$H"
+fresh
+printf 'STATE=connected\nTUNDEV=utun9\nDNS=10.0.0.53 10.0.0.54\n' > "$ST/tunnel.env"
+route_fixture 10.0.0.53/32 utun9 10.0.0.53 255.255.255.255
+route_fixture 10.0.0.54/32 utun9 10.0.0.54 255.255.255.255
+Hreal dns-policy all search.test
+check DNS "scutil accepts missing key and installs default resolver" all rc0 '[ -f "$SD/scutil-present" ]' 'fline "$ST/dns-policy.state" "all search.test"' 'fline "$SD/scutil-calls" "d.add ServerAddresses * 10.0.0.53 10.0.0.54"'
+Hreal dns-policy split
+check DNS "scutil removal restores previous resolver selection" all rc0 '[ ! -f "$SD/scutil-present" ]' '[ ! -f "$ST/dns-policy.state" ]'
+touch "$SD/scutil-fail"
+Hreal dns-policy all
+check DNS "scutil write failure reports error and cleans ownership" all rcbad '[ ! -f "$ST/dns-policy.state" ]' '[ ! -f "$SD/scutil-present" ]'
+rm -f "$SD/scutil-fail"; touch "$SD/scutil-present"
+Hreal dns-policy all
+check DNS "existing unowned DNS key is never replaced" all rcbad '[ -f "$SD/scutil-present" ]' '[ ! -f "$ST/dns-policy.state" ]'
 
 echo "----------------------------------------"
 echo "проверки пунктов: прошло $PASS, упало $FAIL; контрольные: прошло $CPASS, упало $CFAIL"

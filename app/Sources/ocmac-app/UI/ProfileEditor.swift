@@ -21,7 +21,7 @@ struct ProfileEditorView: View {
             case .rules: return L("Форма входа")
             case .totp: return L("Параметры кода")
             case .routes: return L("Сети в туннеле")
-            case .dns: return L("DNS-зоны")
+            case .dns: return "DNS"
             case .identity: return L("Название и файл профиля")
             case .compatibility: return L("Совместимость и прокси")
             case .csd: return L("Проверка устройства · CSD")
@@ -478,7 +478,7 @@ struct ProfileEditorView: View {
                     if ocproxy == false { Footnote(L("Нужен ocproxy: brew install ocproxy")) }
                 } else {
                     detailLink(.routes, summary: L("Записей: %@", doc.routes.count))
-                    detailLink(.dns, summary: L("Зон: %@", doc.zones.count))
+                    detailLink(.dns, summary: doc.dnsMode == "all" ? L("Все домены") : L("Зон: %@", doc.zones.count))
                 }
             } footer: { Footnote(L("Режим — свойство профиля: новый режим начнёт действовать со следующего подключения.")) }
         case .advanced:
@@ -553,6 +553,13 @@ struct ProfileEditorView: View {
         case .routes:
             NativeSection { routesEditor } footer: { Footnote(L("Что не попало в список, идёт мимо туннеля. «Всё в туннель» — 0.0.0.0/1 и 128.0.0.0/1.")) }
         case .dns:
+            NativeSection {
+                Picker(L("Домены через VPN DNS"), selection: $doc.dnsMode) {
+                    Text(L("Все домены")).tag("all")
+                    Text(L("Выбранные домены")).tag("split")
+                }.onChange(of: doc.dnsMode) { _ in touched() }
+                field(L("Поисковый суффикс"), $doc.dnsSearchDomain, hint: "corp.example.com")
+            } footer: { Footnote(L("Суффикс дополняет короткие имена. Он не ограничивает режим «Все домены». Изменения вступят в силу при следующем подключении.")) }
             NativeSection { zonesEditor } footer: { Footnote(L("«vpn» вместо адреса — резолвер, который прислал шлюз. Более длинная зона перебивает короткую.")) }
         case .identity:
             NativeSection {

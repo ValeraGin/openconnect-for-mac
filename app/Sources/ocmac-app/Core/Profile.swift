@@ -33,6 +33,8 @@ struct ProfileDoc {
     // в bin/ocmac), хвост и строки-комментарии сохраняются на своих местах.
     var routes: [String] = []
     var zones: [ZoneLine] = []
+    var dnsMode = "split"
+    var dnsSearchDomain = ""
     var password = "auto"
     var passwordCommand = ""
     var totp = "auto"
@@ -123,8 +125,9 @@ struct ProfileDoc {
                  "keepassentry", "keepassdb", "keepasskeychain", "keychainservice", "idphosts", "rules"],
         "proxy": ["port", "systemproxy"],
         "health": ["check"],
+        "dnspolicy": ["mode", "searchdomain"],
     ]
-    static let knownSections: Set<String> = ["connection", "routes", "dns", "auth", "proxy", "health", "autofill"]
+    static let knownSections: Set<String> = ["connection", "routes", "dns", "dnspolicy", "auth", "proxy", "health", "autofill"]
 
     // --- разбор ----------------------------------------------------------
 
@@ -262,6 +265,8 @@ struct ProfileDoc {
         case ("proxy", "port"): proxyPort = value
         case ("proxy", "systemproxy"): systemProxyValue = value
         case ("health", "check"): health = value
+        case ("dnspolicy", "mode"): dnsMode = value.isEmpty ? "split" : value
+        case ("dnspolicy", "searchdomain"): dnsSearchDomain = value
         default: break
         }
     }
@@ -305,6 +310,12 @@ struct ProfileDoc {
             out += kv(z.zone.trimmed, 24, value)
         }
 
+        if dnsMode != "split" || !dnsSearchDomain.isEmpty || !keptLines("DNSPolicy").isEmpty || !extra("DNSPolicy", 15).isEmpty {
+            out += "\n[DNSPolicy]\n" + keptLines("DNSPolicy")
+            out += kv("Mode", 15, dnsMode)
+            if !dnsSearchDomain.isEmpty { out += kv("SearchDomain", 15, dnsSearchDomain) }
+            out += extra("DNSPolicy", 15)
+        }
         out += "\n[Auth]\n" + keptLines("Auth")
         if password != "auto" && !password.isEmpty { out += kv("Password", 15, password) }
         if !passwordCommand.isEmpty { out += kv("PasswordCommand", 15, passwordCommand) }
@@ -477,11 +488,13 @@ enum ProfileCheck {
                 warn(L("сеть %@ уводит в туннель почти весь трафик — интернет пойдёт через шлюз", r))
             }
         }
-        if d.routeNets.isEmpty {
+        if d.routeNets.isEmpty && d.dnsMode != "all" && d.dnsSearchDomain.isEmpty {
             warn(L("ни одной сети: в туннель не пойдёт ничего"))
         }
 
         destination = .dns
+        if !["split", "all"].contains(d.dnsMode) { err(L("Режим DNS должен быть split или all.")) }
+        if !d.dnsSearchDomain.isEmpty && !validZone(d.dnsSearchDomain) { err(L("Некорректный поисковый суффикс DNS.")) }
         var seenZones = Set<String>()
         for z in d.zones where !z.zone.trimmed.isEmpty {
             let zone = z.zone.trimmed, resolver = z.resolver.trimmed
