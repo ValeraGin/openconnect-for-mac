@@ -8,6 +8,7 @@ enum WindowBridge {
     private static var openWindow: OpenWindowAction?
     private static var holder: NSWindow?
     private static var quietSetup: NSWindow?
+    private static var quietSettings: NSWindow?
     private static var pending: [String] = []
 
     static func install() {
@@ -46,9 +47,35 @@ enum WindowBridge {
         AppLog.write("quiet setup: visible=\(window.isVisible), active=\(NSApp.isActive), key=\(window.isKeyWindow)")
     }
 
+    /// Installer entry point: interactive settings on the built-in display,
+    /// without changing the foreground application or keyboard focus.
+    static func openSettingsQuietly() {
+        guard let display = NSScreen.screens.first(where: {
+            let id = ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0
+            return CGDisplayIsBuiltin(id) != 0
+        }) else { AppLog.write("quiet settings: built-in display unavailable"); return }
+        let window = quietSettings ?? NSWindow(contentRect: NSRect(x: 0, y: 0, width: SettingsWindow.width, height: SettingsWindow.height),
+            styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        window.title = L("Настройка OpenConnect for Mac")
+        window.identifier = NSUserInterfaceItemIdentifier("quiet-settings")
+        window.isReleasedWhenClosed = false
+        if quietSettings == nil { window.contentView = NSHostingView(rootView: SettingsWindow()) }
+        let frame = display.visibleFrame
+        window.setFrameOrigin(NSPoint(x: frame.midX - window.frame.width / 2, y: frame.midY - window.frame.height / 2))
+        quietSettings = window
+        NSApp.unhideWithoutActivation()
+        window.orderFrontRegardless()
+        AppLog.write("quiet settings: visible=\(window.isVisible), active=\(NSApp.isActive), key=\(window.isKeyWindow)")
+    }
+
     static func closeQuietSetup() { quietSetup?.close() }
 
     static func open(_ id: String) {
+        if id == WindowID.settings, let quietSettings {
+            quietSettings.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
         if id == WindowID.setup, let quietSetup {
             quietSetup.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)

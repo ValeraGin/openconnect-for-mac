@@ -26,12 +26,7 @@ final class PromptDialog {
     func build() {
         alert = NSAlert()
         alert.messageText = secure ? L("Пароль VPN") : L("Код из SMS")
-        // У ocmac-auth нет бандла и своей иконки — без этого NSAlert
-        // показал бы папку.
-        let cfg = NSImage.SymbolConfiguration(pointSize: 40, weight: .regular)
-            .applying(.init(paletteColors: [.systemBlue]))
-        if let icon = NSImage(systemSymbolName: secure ? "key.fill" : "message.fill", accessibilityDescription: nil)?
-            .withSymbolConfiguration(cfg) { alert.icon = icon }
+        alert.icon = TeachDialog.brandIcon()
         // Подпись шлюза («Response:») в окно не выводим: человеку она ничего не
         // говорит; она есть в журнале входа.
         let info = secure

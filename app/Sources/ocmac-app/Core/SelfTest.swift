@@ -32,10 +32,13 @@ enum SelfTest {
         }
         check("переход из ошибки: адрес → основные поля", reviewDestination({ $0.url = "" }, .basics))
         check("переход из ошибки: сеть → сети и DNS", reviewDestination({ $0.routes = ["bad-network"] }, .networks))
-        check("переход из ошибки: DNS → сети и DNS", reviewDestination({ $0.zones = [.init(zone: "example.test", resolver: "bad", port: "")] }, .networks))
+        check("переход из ошибки: DNS → редактор DNS", reviewDestination({ $0.zones = [.init(zone: "example.test", resolver: "bad", port: "")] }, .dns))
         check("переход из ошибки: порт → режим", reviewDestination({ $0.proxyPort = "99999" }, .mode))
-        check("переход из ошибки: пароль → параметры входа", reviewDestination({ $0.password = "command" }, .connection))
-        check("переход из ошибки: файл → параметры входа", reviewDestination({ $0.fileName = "bad name" }, .connection))
+        check("переход из ошибки: пароль → параметры входа", reviewDestination({ $0.password = "command" }, .sources))
+        check("переход из ошибки: файл → название и файл", reviewDestination({ $0.fileName = "bad name" }, .identity))
+        check("переход из ошибки: TOTP → параметры кода", reviewDestination({ $0.totpPeriod = "bad" }, .totp))
+        check("переход из ошибки: CSD → скрипт", reviewDestination({ $0.csdScriptBase64 = "invalid" }, .csd))
+        check("переход из ошибки: правила → форма входа", reviewDestination({ $0.autofill = ["invalid"] }, .rules))
         check("полный текст: короткая ошибка без раскрытия", !ExpandableMessage.needsDisclosure("Short error"))
         check("полный текст: длинная ошибка раскрывается", ExpandableMessage.needsDisclosure(String(repeating: "x", count: 500)))
         check("полный текст: многострочная ошибка раскрывается", ExpandableMessage.needsDisclosure("1\n2\n3\n4"))
@@ -520,7 +523,8 @@ extension SelfTest {
 
         let window = NSWindow(contentRect: NSRect(x: -4000, y: 0, width: 900, height: 1500),
                               styleMask: [.titled], backing: .buffered, defer: false)
-        window.contentView = NSHostingView(rootView: ProfileEditorView())
+        let navigation = SettingsProbeNavigation()
+        window.contentView = NSHostingView(rootView: SettingsProbeHost(navigation: navigation))
         window.orderFront(nil)
         defer { window.orderOut(nil) }
         func settle(_ s: TimeInterval) { RunLoop.current.run(until: Date().addingTimeInterval(s)) }
@@ -529,7 +533,7 @@ extension SelfTest {
             while let v = stack.popLast() { if let t = v as? T { out.append(t) }; stack += v.subviews }
             return out
         }
-        func shows(_ text: String) -> Bool { views(NSTextField.self).contains { $0.stringValue == text } }
+        func shows(_ text: String) -> Bool { views(NSTextField.self).contains { $0.stringValue == text } || views(NSPopUpButton.self).contains { $0.titleOfSelectedItem == text } }
         settle(2.5)
         check("редактор: открыт первый профиль", shows("Альфа"))
         check("редактор: разметка доступна у открытого профиля", ProfileEditorView.probeLearnEnabled == true,
@@ -563,9 +567,30 @@ extension SelfTest {
             try? valid.write(toFile: tmp + "/profiles/b.ocmac", atomically: true, encoding: .utf8)
             settle(3.5)
             check("редактор: после исправления подключение снова доступно", ProfileEditorView.probeConnectEnabled == true)
+            let fileBeforeNavigation = try? String(contentsOfFile: tmp + "/profiles/b.ocmac")
+            if let user = views(NSTextField.self).first(where: { $0.accessibilityLabel() == L("Пользователь") }) {
+                user.stringValue = "unsaved-navigation-user"
+                user.delegate?.controlTextDidChange?(Notification(name: NSText.didChangeNotification, object: user))
+                settle(0.2)
+                navigation.page = .login; settle(0.2)
+                navigation.page = .general; settle(0.2)
+                navigation.page = .connection; settle(0.4)
+                check("editor retains draft across sidebar sections", views(NSTextField.self).contains { $0.stringValue == "unsaved-navigation-user" })
+                check("sidebar navigation does not save automatically", (try? String(contentsOfFile: tmp + "/profiles/b.ocmac")) == fileBeforeNavigation)
+                check("unsaved draft still blocks connection", ProfileEditorView.probeConnectEnabled == false)
+            } else { check("native single-line username field found", false) }
+
         } else {
             check("редактор: выбор профиля найден", false)
         }
         return failures
     }
+}
+
+private final class SettingsProbeNavigation: ObservableObject {
+    @Published var page = SettingsPage.connection
+}
+private struct SettingsProbeHost: View {
+    @ObservedObject var navigation: SettingsProbeNavigation
+    var body: some View { ProfileEditorView(page: $navigation.page) }
 }

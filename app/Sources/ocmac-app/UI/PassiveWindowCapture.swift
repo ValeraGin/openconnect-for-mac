@@ -45,7 +45,8 @@ enum PassiveWindowCapture {
         if CommandLine.arguments.contains("--light") { NSApp.appearance = NSAppearance(named: .aqua) }
         if CommandLine.arguments.contains("--dark") { NSApp.appearance = NSAppearance(named: .darkAqua) }
         let requested = ScreenshotWindowSize.content(settings: screen == "settings")
-        let size = screen == "settings" ? NSSize(width: SettingsWindow.width, height: SettingsWindow.height)
+        let detail = screen == "settings" && argument("--settings-detail") != nil
+        let size = detail ? NSSize(width: 520, height: 460) : screen == "settings" ? NSSize(width: SettingsWindow.width, height: SettingsWindow.height)
             : screen == "setup" ? NSSize(width: SetupView.width, height: SetupView.height) : requested
         let panel = Panel(contentRect: NSRect(origin: display.visibleFrame.origin, size: size),
                           styleMask: [.titled, .closable, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -57,7 +58,7 @@ enum PassiveWindowCapture {
         panel.title = screen == "settings" ? L("Настройка OpenConnect for Mac") : "OpenConnect for Mac"
         let content: AnyView
         switch screen {
-        case "settings": content = AnyView(SettingsWindow())
+        case "settings": content = detail ? AnyView(ProfileEditorView()) : AnyView(SettingsWindow())
         case "setup": content = AnyView(SetupView())
         default: content = AnyView(ConnectionView(store: ConnectionScreenshotFixture.store))
         }

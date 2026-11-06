@@ -2,6 +2,12 @@ import AppKit
 import Combine
 
 enum ProfileOpening {
+    static func preferredSettingsProfile(files: [String], active: String, last: String) -> String? {
+        if files.contains(active) { return active }
+        if files.contains(last) { return last }
+        return files.first
+    }
+
     static let maximumBytes = 2 * 1024 * 1024
 
     static func sameConfiguration(_ left: Data, _ right: Data) -> Bool {

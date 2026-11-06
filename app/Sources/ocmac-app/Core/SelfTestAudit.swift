@@ -22,6 +22,11 @@ extension SelfTest {
         auditProfileParsing(t)
         auditProfileChecks(t)
         auditProfileWorkflow(t)
+        t.check("settings prefer active profile", ProfileOpening.preferredSettingsProfile(files: ["a", "b"], active: "b", last: "a") == "b")
+        t.check("settings restore last profile", ProfileOpening.preferredSettingsProfile(files: ["a", "b"], active: "missing", last: "b") == "b")
+        t.check("settings tolerate removed last profile", ProfileOpening.preferredSettingsProfile(files: ["a"], active: "", last: "missing") == "a")
+        t.check("empty settings have no selected profile", ProfileOpening.preferredSettingsProfile(files: [], active: "", last: "") == nil)
+
         auditQuickProfile(t)
         auditSetup(t)
         auditStatus(t)

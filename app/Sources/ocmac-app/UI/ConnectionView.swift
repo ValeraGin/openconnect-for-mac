@@ -50,8 +50,8 @@ struct ConnectionView: View {
             Divider()
 
             HStack(alignment: .top, spacing: 8) {
-                StateDot(color: look.color, pulsing: look.pulsing)
-                    .padding(.top, 4)
+                AppMark(size: 38)
+                    .overlay(alignment: .bottomTrailing) { StateDot(color: look.color, pulsing: look.pulsing) }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(headline).fontWeight(.medium)
                     if let step = ConnectStep.of(status) {
@@ -94,6 +94,8 @@ struct ConnectionView: View {
                 }
             }
         }
+        .tint(.blue)
+        .background(Color(nsColor: .windowBackgroundColor))
         .padding(20)
         .frame(minWidth: 380, idealWidth: 420, maxWidth: 480)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -384,7 +384,7 @@ struct ProfileDoc {
 
 struct Issue: Identifiable {
     enum Level { case error, warning }
-    enum Destination: String { case basics, connection, mode, networks }
+    enum Destination: String { case basics, connection, mode, networks, dns, identity, sources, totp, csd, rules }
     let level: Level
     let text: String
     var destination: Destination = .connection
@@ -445,7 +445,7 @@ enum ProfileCheck {
 
     static func check(_ d: ProfileDoc) -> [Issue] {
         var issues: [Issue] = []
-        var destination: Issue.Destination = .connection
+        var destination: Issue.Destination = .identity
         func err(_ t: String) { issues.append(Issue(level: .error, text: t, destination: destination)) }
         func warn(_ t: String) { issues.append(Issue(level: .warning, text: t, destination: destination)) }
 
@@ -481,6 +481,7 @@ enum ProfileCheck {
             warn(L("ни одной сети: в туннель не пойдёт ничего"))
         }
 
+        destination = .dns
         var seenZones = Set<String>()
         for z in d.zones where !z.zone.trimmed.isEmpty {
             let zone = z.zone.trimmed, resolver = z.resolver.trimmed
@@ -495,7 +496,7 @@ enum ProfileCheck {
             }
         }
 
-        destination = .connection
+        destination = .totp
         let alg = d.totpAlgorithm.uppercased()
         if !ProfileDoc.totpAlgorithms.contains(alg) {
             err(L("алгоритм кода «%@» — бывает SHA1, SHA256 или SHA512", d.totpAlgorithm))
@@ -512,6 +513,7 @@ enum ProfileCheck {
         if customCode && ["keepassxc", "command", "off", "sms"].contains(d.totp) {
             warn(L("параметры кода нужны только секрету в связке ключей — KeePassXC и команда отдают готовый код"))
         }
+        destination = .sources
         switch d.totp {
         case "sms":
             warn(L("код приходит по SMS и вводится руками — молчаливое переподключение работать не будет"))
@@ -575,7 +577,7 @@ enum ProfileCheck {
         if d.systemProxy && d.mode != "proxy" {
             warn(L("системный SOCKS имеет смысл только в прокси-режиме"))
         }
-        destination = .connection
+        destination = .csd
         if !d.csdScriptBase64.isEmpty {
             if !d.csdWrapper.isEmpty { err(L("Укажите CsdWrapper или встроенный CSD-скрипт, только один вариант")) }
             if let why = ProfileDoc.csdScriptIssue(d.csdScriptBase64) { err(why) }
@@ -583,6 +585,7 @@ enum ProfileCheck {
         if !d.csdWrapper.isEmpty, d.csdWrapper.contains(" ") {
             warn(L("путь CsdWrapper с пробелом — хелпер берёт только имя файла из своего каталога"))
         }
+        destination = .rules
         for rule in d.autofill.map({ ProfileDoc.cliTrim($0) }) where !rule.isEmpty && !ProfileDoc.isComment(rule) {
             if !validRule(rule) { err(L("правило «%@» — бывает stop <сел>, fill username|password|totp|manual <сел>, click <сел>, click! <сел>", rule)) }
         }

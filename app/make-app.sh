@@ -57,6 +57,7 @@ BIN=$(swift build -c release --show-bin-path)
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN/ocmac-app" "$APP/Contents/MacOS/ocmac-app"
+cp -R Resources/Lucide "$APP/Contents/Resources/"
 
 # Иконка рисуется кодом (make-icon.swift) и собирается в .icns. Интерпретатор
 # swift внутри песочницы brew может не собрать её (кэш модулей), поэтому

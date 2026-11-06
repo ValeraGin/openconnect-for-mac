@@ -71,6 +71,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // A profile imported by install.sh should lead straight to the username,
         // while an established setup keeps its quiet menu-bar launch.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            if CommandLine.arguments.contains("--settings-quiet") {
+                WindowBridge.openSettingsQuietly()
+                return
+            }
             if CommandLine.arguments.contains("--setup-quiet") {
                 let args = CommandLine.arguments
                 let profile = args.firstIndex(of: "--setup-profile").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }

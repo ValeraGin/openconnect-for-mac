@@ -12,7 +12,7 @@ final class StatusStore: ObservableObject {
     // Один живой экземпляр на приложение: к нему обращаются и меню, и
     // глобальная горячая клавиша, которой до иерархии представлений не
     // дотянуться. Витрина создаёт свои, с подставленным состоянием.
-    static let shared = StatusStore()
+    static let shared: StatusStore = CommandLine.arguments.contains("--stage") ? ConnectionScreenshotFixture.store : StatusStore()
 
     @Published private(set) var status = Status()
     @Published private(set) var samples: [TrafficSample] = []

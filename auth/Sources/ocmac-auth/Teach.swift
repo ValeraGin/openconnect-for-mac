@@ -388,24 +388,19 @@ final class TeachDialog: NSObject, NSTextFieldDelegate {
         return l
     }
 
-    /// Та же монограмма «oc» на синем поле, что у приложения (make-icon.swift):
-    /// ocmac-auth — голый исполняемый файл, и без этого окно показывало бы
-    /// чужой значок по умолчанию.
+    /// Use the installed application's actual icon in all standalone auth dialogs.
     static func brandIcon(side: CGFloat = 64) -> NSImage {
-        NSImage(size: NSSize(width: side, height: side), flipped: false) { rect in
-            let inset = side * 0.09
-            let r = rect.insetBy(dx: inset, dy: inset)
-            let shape = NSBezierPath(roundedRect: r, xRadius: r.width * 0.225, yRadius: r.width * 0.225)
-            NSGradient(colors: [NSColor(srgbRed: 0.20, green: 0.44, blue: 0.78, alpha: 1),
-                                NSColor(srgbRed: 0.11, green: 0.26, blue: 0.52, alpha: 1)])?.draw(in: shape, angle: -90)
-            let base = NSFont.systemFont(ofSize: side * 0.58, weight: .heavy)
-            let font = base.fontDescriptor.withDesign(.rounded).flatMap { NSFont(descriptor: $0, size: side * 0.58) } ?? base
-            let text = NSAttributedString(string: "oc", attributes: [.font: font, .foregroundColor: NSColor.white,
-                                                                      .kern: -side * 0.03])
-            let sz = text.size()
-            text.draw(at: NSPoint(x: (side - sz.width) / 2, y: (side - sz.height) / 2 - side * 0.02))
-            return true
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let bundles = [NSWorkspace.shared.urlForApplication(withBundleIdentifier: "ru.ocmac.app"),
+                       home.appendingPathComponent("Applications/OpenConnect for Mac.app"),
+                       URL(fileURLWithPath: "/Applications/OpenConnect for Mac.app")]
+        for bundle in bundles.compactMap({ $0 }) {
+            if let icon = NSImage(contentsOf: bundle.appendingPathComponent("Contents/Resources/AppIcon.icns")) {
+                icon.size = NSSize(width: side, height: side)
+                return icon
+            }
         }
+        return NSImage(systemSymbolName: "network", accessibilityDescription: "OpenConnect for Mac") ?? NSImage(size: NSSize(width: side, height: side))
     }
 
     private func build() {

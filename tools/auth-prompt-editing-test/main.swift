@@ -1,5 +1,7 @@
 import AppKit
 
+enum TeachDialog { static func brandIcon() -> NSImage { NSImage(size: .zero) } }
+
 // Synthetic dispatch test: replace the native editor with a spy. This never
 // invokes AppKit paste, reads a pasteboard, or inspects a user's password.
 func L(_ text: String, _ args: CVarArg...) -> String { String(format: text, arguments: args) }

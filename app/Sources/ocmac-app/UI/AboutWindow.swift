@@ -17,24 +17,48 @@ struct AboutView: View {
     @State private var v: [String: String] = [:]
     @Environment(\.openWindow) private var openWindow
 
+    @State private var detail: String?
     var body: some View {
-        Form {
-            Section {
-                HStack(spacing: 14) {
-                    AppMark(size: 56)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("OpenConnect for Mac").font(.system(size: 20, weight: .semibold))
-                        Text(L("Клиент OpenConnect для macOS: SSO, split DNS, split tunneling"))
-                            .font(.system(size: 12)).foregroundStyle(.secondary)
-                        Text(L("Независимый проект. Не связан с проектом OpenConnect или Cisco."))
-                            .font(.system(size: 11)).foregroundStyle(.secondary)
-                        Text(L("ValeraGin — Ignatkovich Valery · лицензия MIT"))
-                            .font(.system(size: 11)).foregroundStyle(.tertiary)
+        NativeForm {
+            VStack(alignment: .leading, spacing: 10) {
+                AppMark(size: 64)
+                Text("OpenConnect for Mac").font(.system(size: 21, weight: .semibold))
+                Text(AppInfo.version).font(.system(.body, design: .monospaced)).foregroundStyle(.secondary)
+                Text(L("Клиент OpenConnect для macOS: SSO, split DNS, split tunneling"))
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(L("Независимый проект. Не связан с проектом OpenConnect или Cisco."))
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }.padding(.bottom, 12)
+            NativeSection {
+                Button(L("Компоненты")) { detail = "components" }
+                Button(L("Где что лежит")) { detail = "files" }
+                Button(L("Лицензии")) { detail = "licenses" }
+            }
+            Text(L("ValeraGin — Ignatkovich Valery · лицензия MIT")).font(.caption).foregroundStyle(.secondary)
+        }
+        .onAppear { load() }
+        .sheet(isPresented: Binding(get: { detail != nil }, set: { if !$0 { detail = nil } })) {
+            VStack(spacing: 0) {
+                HStack { Text(detail == "components" ? L("Компоненты") : detail == "files" ? L("Где что лежит") : L("Лицензии")).font(.headline); Spacer() }.padding(20)
+                Divider()
+                NativeForm {
+                    if detail == "components" { components }
+                    else if detail == "files" { locations }
+                    else {
+                        Text("OpenConnect for Mac — MIT").font(.headline)
+                        Text("Lucide — ISC / MIT").font(.headline)
+                        if let url = Bundle.main.resourceURL?.appendingPathComponent("Lucide/LICENSE"), let license = try? String(contentsOf: url) {
+                            Text(license).font(.caption).textSelection(.enabled)
+                        }
                     }
                 }
-                .padding(.vertical, 6)
-            }
-            Section {
+                Divider()
+                HStack { Spacer(); Button(L("Готово")) { detail = nil }.keyboardShortcut(.defaultAction) }.padding(16)
+            }.frame(width: 520, height: 460)
+        }
+    }
+    private var components: some View {
+            NativeSection {
                 part(L("Приложение"), AppInfo.version, Bundle.main.executablePath ?? "")
                 part(L("Клиент OpenConnect for Mac"), v["ocmac"], v["ocmac_path"])
                 part(L("Хелпер (root)"), helperVersion, v["helper_path"])
@@ -48,10 +72,12 @@ struct AboutView: View {
                      + (GlobalHotkeys.shared.isRegistered("pause")
                         ? L("Пауза — ⌥⌘P из любой программы.") : L("⌥⌘P занято другой программой: пауза только из меню.")))
             }
-            Section {
+    }
+    private var locations: some View {
+            NativeSection {
                 HStack {
-                    Button(L("Журналы")) { openWindow(id: WindowID.logs) }
-                    Button(L("Диагностика")) { openWindow(id: WindowID.diagnostics) }
+                    Button(L("Журналы")) { WindowBridge.open(WindowID.logs) }
+                    Button(L("Диагностика")) { WindowBridge.open(WindowID.diagnostics) }
                     Spacer()
                 }
                 reveal(L("Каталог конфигурации"), v["config_dir"] ?? OCMacClient.shared.configDir)
@@ -61,12 +87,7 @@ struct AboutView: View {
                 reveal(L("Журнал приложения"), AppLog.path)
             } header: {
                 Text(L("Где что лежит"))
-            }
-        }
-        .formStyle(.grouped)
-        .navigationTitle(L("О программе"))
-        .onAppear { load() }
-    }
+            }    }
 
     private var helperVersion: String? {
         guard let version = v["helper"], !version.isEmpty else { return nil }

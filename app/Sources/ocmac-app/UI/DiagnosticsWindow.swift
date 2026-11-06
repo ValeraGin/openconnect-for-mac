@@ -4,6 +4,7 @@ import SwiftUI
 // «повторить». Здесь же уборка — единственное действие, которое меняет
 // систему, поэтому рядом написано, что именно она делает.
 struct DiagnosticsView: View {
+    var embedded = false
     @ObservedObject private var store = StatusStore.shared
     @Environment(\.openWindow) private var openWindow
     @State private var text = ""
@@ -28,7 +29,7 @@ struct DiagnosticsView: View {
             Divider()
             cleanupBar
         }
-        .frame(minWidth: 640, minHeight: 420)
+        .frame(minWidth: embedded ? 0 : 640, minHeight: embedded ? 0 : 420)
         .onAppear { run() }
         // Результат уборки виден в повторной диагностике — когда уборка
         // закончится, а не через три секунды наугад.
@@ -38,33 +39,20 @@ struct DiagnosticsView: View {
     }
 
     private var toolbar: some View {
-        HStack(spacing: 10) {
-            Text("ocmac doctor").font(.system(size: 13, weight: .medium))
-            Text(L("ничего не меняет — только проверяет"))
-                .font(.system(size: 11)).foregroundStyle(Palette.tertiary)
-            // Сеть и супервизор раньше жили строкой в меню; здесь им место.
-            Text(L("· сеть %@ · ", store.status.iface.isEmpty ? "?" : store.status.iface)
-                 + (store.status.supervisor ? L("супервизор работает") : L("супервизор не запущен")))
-                .font(.system(size: 11))
-                .foregroundStyle(store.status.supervisor ? Palette.tertiary : Palette.warn)
-            Spacer()
-            if let stamp {
-                Text(Self.clock.string(from: stamp)).font(.ocMonoSmall).foregroundStyle(Palette.tertiary)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label(L("Диагностика"), systemImage: "stethoscope").fontWeight(.semibold)
+                Spacer()
+                if running { ProgressView().controlSize(.small) }
+                if let stamp { Text(Self.clock.string(from: stamp)).font(.caption).foregroundStyle(.secondary) }
             }
-            Button(L("Сохранить отчёт…")) { saveReport() }
-                .disabled(reporting || store.busy != nil)
-            Button(L("Журналы…")) {
-                openWindow(id: WindowID.logs)
-                NSApp.activate(ignoringOtherApps: true)
+            HStack {
+                Button(L("Повторить")) { run() }.disabled(running)
+                Button(L("Сохранить отчёт…")) { saveReport() }.disabled(reporting || store.busy != nil)
+                Spacer()
+                Button(L("Журналы…")) { WindowBridge.open(WindowID.logs) }
             }
-            Button {
-                run()
-            } label: {
-                Label(L("Повторить"), systemImage: "arrow.clockwise")
-            }
-            .disabled(running)
-        }
-        .padding(.horizontal, 12).padding(.vertical, 8)
+        }.padding(16)
     }
 
     // Отчёт для разбора: один файл с версиями, диагностикой и хвостами
@@ -122,6 +110,10 @@ struct DiagnosticsView: View {
 
     private func run() {
         guard !running else { return }
+        if CommandLine.arguments.contains("--stage") {
+            text = CommandLine.arguments.contains("--diagnostic-error") ? "[FAIL] vpn.example.com: connection timed out" : "[ OK ] Client installed\n[ OK ] Profile valid\n[ OK ] Helper ready\n[ OK ] DNS configuration"
+            return
+        }
         running = true
         DispatchQueue.global(qos: .userInitiated).async {
             let out = OCMacClient.shared.doctor()

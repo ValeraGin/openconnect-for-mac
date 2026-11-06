@@ -3,6 +3,7 @@ import SwiftUI
 // Просмотр журналов: супервизор и openconnect, автопрокрутка, фильтр по
 // подстроке, «показать в Finder». Ничего не меняет — только читает.
 struct LogsView: View {
+    var embedded = false
     @State private var sources: [LogSource] = []
     @State private var current: String = "all"
     @State private var filter = ""
@@ -22,7 +23,7 @@ struct LogsView: View {
             Divider()
             footer
         }
-        .frame(minWidth: 620, minHeight: 360)
+        .frame(minWidth: embedded ? 0 : 620, minHeight: embedded ? 0 : 360)
         .onAppear { loadSources(); reload(); start() }
         .onDisappear { timer?.invalidate() }
     }
@@ -32,7 +33,7 @@ struct LogsView: View {
             Picker("", selection: $current) {
                 ForEach(sources) { s in Text(s.title).tag(s.id) }
             }
-            .pickerStyle(.segmented).labelsHidden().frame(width: 520)
+            .pickerStyle(.menu).labelsHidden().frame(maxWidth: 190)
             .onChange(of: current) { _ in reload() }
 
             TextField(L("фильтр по подстроке"), text: $filter)
@@ -103,6 +104,15 @@ struct LogsView: View {
     // Пути — из `ocmac version --all`, но в фоне: вызов бывает долгим, а
     // окно должно открыться сразу. До ответа — запасные пути.
     private func loadSources() {
+        if CommandLine.arguments.contains("--stage") {
+            let directory = NSTemporaryDirectory() + "ocmac-review-logs-\(getpid())"
+            try? FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+            let path = directory + "/sample.log"
+            let sample = CommandLine.arguments.contains("--empty-logs") ? "" : "2026-01-01 12:00:00 [info] Connecting to vpn.example.com\n2026-01-01 12:00:01 [info] Tunnel ready\n"
+            try? sample.write(toFile: path, atomically: true, encoding: .utf8)
+            sources = [LogSource(id: "all", title: L("Все"), path: directory), LogSource(id: "app", title: L("Приложение"), path: path)]
+            return
+        }
         sources = Self.sources(from: [:])
         DispatchQueue.global(qos: .utility).async {
             let v = OCMacClient.shared.versions()

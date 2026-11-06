@@ -10,9 +10,9 @@ struct NotificationsView: View {
     @ObservedObject private var system = NotifyState.shared
 
     var body: some View {
-        Form {
+        NativeForm {
             if !system.allowed {
-                Section {
+                NativeSection {
                     HStack(spacing: 8) {
                         Image(systemName: "bell.slash.fill").foregroundStyle(Palette.warn)
                         Text(L("Система не показывает уведомления OpenConnect for Mac."))
@@ -21,7 +21,7 @@ struct NotificationsView: View {
                     }
                 }
             }
-            Section {
+            NativeSection {
                 row($login, L("Нужен вход"), L("Сессия истекла, молча войти не удалось"))
                 row($problems, L("Проблемы со связью и доступом"), L("Связь потеряна, доступ не проходит, SOCKS не включён"))
                 row($events, L("Восстановление соединения"), L("Связь вернулась, пауза и возобновление, перезапуск прокси"))
@@ -30,7 +30,7 @@ struct NotificationsView: View {
             } footer: {
                 Footnote(L("Одно и то же уведомление — не чаще раза в 10 минут. Стиль и звук — в Системных настройках."))
             }
-            Section {
+            NativeSection {
                 HStack {
                     Button(L("Проверить уведомление")) {
                         Notifier.show(title: L("Проверка"), body: L("Так выглядят уведомления OpenConnect for Mac."))
@@ -40,7 +40,7 @@ struct NotificationsView: View {
                 }
             }
         }
-        .formStyle(.grouped)
+
         .navigationTitle(L("Уведомления"))
         .onAppear { Notifier.refreshAllowed() }
     }

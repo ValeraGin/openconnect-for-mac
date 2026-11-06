@@ -21,13 +21,10 @@
 "Перейти к настройке" = "Go to setting";
 "Настроить клиент…" = "Set up client…";
 "Исправьте ошибки профиля перед подключением" = "Fix the profile errors before connecting";
-"Пароль и код из SMS нужно ввести при подключении. Автоматическое переподключение недоступно." = "Enter your password and SMS code when connecting. Automatic reconnection is unavailable.";
 "Замечаний к профилю: %@" = "Profile issues: %@";
-"Укажите название и адрес сервера." = "Enter a name and server address.";
 "Скрыть" = "Dismiss";
 
 /* Диагностика */
-"ничего не меняет — только проверяет" = "changes nothing — only checks";
 "Сохранить отчёт…" = "Save report…";
 "Журналы…" = "Logs…";
 "Повторить" = "Run again";
@@ -120,17 +117,13 @@
 "Порядок профилей — перетаскиванием; тот же порядок в меню" = "Drag to reorder; the menu uses the same order";
 "Новый профиль" = "New profile";
 "Показать папку профилей" = "Show the profiles folder";
-"Подключён" = "Connected";
 "Подключить" = "Connect";
 "Переключиться" = "Switch";
 
 /* Редактор профиля */
 "Название" = "Name";
-"как в меню" = "as shown in the menu";
 "Описание" = "Description";
 "вторая строка в меню" = "second line in the menu";
-"Адрес" = "Address";
-"vpn.example.com/группа" = "vpn.example.com/group";
 "Пользователь" = "User";
 "Как входить" = "How to sign in";
 "SSO в окне браузера" = "SSO in a browser window";
@@ -146,21 +139,16 @@
 "имя сервиса в Keychain" = "keychain service name";
 "Форма входа" = "Sign-in form";
 "Имя файла" = "File name";
-"имя.ocmac в ~/.config/ocmac/profiles" = "name.ocmac in ~/.config/ocmac/profiles";
-"если шлюз просит проверку соответствия" = "if the gateway asks for a posture check";
 "Сервис в связке ключей" = "Keychain service";
 "Хосты провайдера входа" = "Identity provider hosts";
 "пусто — только цепочка от шлюза" = "empty — only the chain from the gateway";
 "Проверка доступа" = "Access check";
 "URL, хост:порт или имя" = "URL, host:port or a name";
-"Показать файл, как он будет записан" = "Show the file as it will be written";
 "Дополнительно" = "Advanced";
 "Режим подключения" = "Connection mode";
 "Режим — свойство профиля: новый режим начнёт действовать со следующего подключения." = "The mode belongs to the profile: a new mode takes effect on the next connection.";
 "Порт" = "Port";
-"часто занят другим прокси-клиентом" = "often taken by another proxy client";
 "Включать системный SOCKS" = "Set the system-wide SOCKS proxy";
-"Параметры SOCKS" = "SOCKS settings";
 "Сети и DNS применяются только в режиме «Туннель»." = "Networks and DNS apply in Tunnel mode only.";
 "Что не попало в список, идёт мимо туннеля. «Всё в туннель» — 0.0.0.0/1 и 128.0.0.0/1." = "Anything not listed goes outside the tunnel. For everything, use 0.0.0.0/1 and 128.0.0.0/1.";
 "«vpn» вместо адреса — резолвер, который прислал шлюз. Более длинная зона перебивает короткую." = "\"vpn\" instead of an address means the resolver the gateway sent. A longer zone wins over a shorter one.";
@@ -176,7 +164,6 @@
 "комментарий" = "comment";
 "Убрать сеть" = "Remove network";
 "Добавить сеть" = "Add network";
-"10.0.0.1 или vpn" = "10.0.0.1 or vpn";
 "Убрать зону" = "Remove zone";
 "Добавить зону" = "Add zone";
 "Файл изменился на диске, пока здесь есть правки: сохранение спросит, что оставить." = "The file changed on disk while this form has edits: saving will ask what to keep.";
@@ -202,16 +189,11 @@
 "Журнал приложения" = "App log";
 " · без NOPASSWD" = " · without NOPASSWD";
 "проверяю…" = "checking…";
-"· сеть %@ · " = "· network %@ · ";
-"супервизор работает" = "supervisor is running";
-"супервизор не запущен" = "supervisor is not running";
 "Адреса, домены и логины в отчёте заменены метками. Перед отправкой посмотрите файл." = "Addresses, domains and logins in the report are masked. Look through the file before sending it.";
 "отчёт не сохранился: " = "the report was not saved: ";
 "системный SOCKS без живого прокси. Системный DNS не трогает — OpenConnect for Mac его не ставит. " = "a system-wide SOCKS with no live proxy. System DNS is left alone — OpenConnect for Mac never sets it. ";
 "Живой туннель и чужой openconnect не трогает. То же, что `ocmac cleanup`." = "A live tunnel and someone else's openconnect are left alone. Same as `ocmac cleanup`.";
-"Значок появится в строке меню сам; туннель при этом не поднимается." = "The icon appears in the menu bar by itself; the tunnel is not brought up.";
 "Всегда: %@" = "Always: %@";
-"Сеть определяется по маршрутизатору, без геолокации. Если сессия истекла, автоподключение остановится и меню покажет «Нужен вход»." = "The network is recognised by its router, with no location access. If the session expires, auto-connect stops and the menu says “Sign-in needed”.";
 "Добавляет в меню «Выйти совсем (сброс входа)»: следующий вход пройдёт с формой." = "Adds “Sign out completely (reset login)” to the menu: the next sign-in goes through the form.";
 "не вышло: " = "did not work: ";
 "%@ строк · %@" = "%@ lines · %@";
@@ -220,7 +202,6 @@
 "Уведомления выключены" = "Notifications are off";
 "не применяются" = "not applied";
 "Прокси SOCKS" = "SOCKS proxy";
-"Сети и DNS" = "Networks and DNS";
 "проверен в %@" = "checked at %@";
 "проверен" = "checked";
 "не отвечает" = "no answer";
@@ -252,17 +233,10 @@
 "Подключиться этим профилем" = "Connect with this profile";
 "Переключиться на «%@»?" = "Switch to “%@”?";
 "Сейчас подключён «%@». Он отключится, для нового профиля потребуется вход." = "“%@” is connected now. It will disconnect, and the new profile will need a sign-in.";
-"Пароль OpenConnect for Mac подставит сам, код из SMS спросит окном. Молча переподключиться такой профиль не может." = "OpenConnect for Mac fills in the password and asks for the SMS code in a window. Such a profile can never reconnect silently.";
-"Пароль вводит человек — молчаливое переподключение работать не будет." = "You type the password — silent reconnection will not work.";
 "Секреты хранятся вне профиля: в связке ключей или в KeePassXC." = "Secrets live outside the profile: in the keychain or in KeePassXC.";
 "Туннель" = "Tunnel";
-"Маршруты и DNS" = "Routes and DNS";
-"Нужен системный помощник" = "Needs the system helper";
 "Для программ с поддержкой SOCKS" = "For apps that speak SOCKS";
 "Нужен ocproxy: brew install ocproxy" = "Needs ocproxy: brew install ocproxy";
-"Без прав администратора" = "No administrator rights";
-"Прокси ставится на активную сетевую службу и снимается при отключении. Чужой SOCKS OpenConnect for Mac не перезаписывает." = "The proxy is set on the active network service and removed on disconnect. OpenConnect for Mac never overwrites someone else's SOCKS.";
-"Система не трогается: SOCKS 127.0.0.1:%@ указывают тем программам, которым он нужен." = "The system is left alone: point the apps that need it at SOCKS 127.0.0.1:%@.";
 
 /* Редактор, разметка формы, мастер — часть третья */
 "Идёт разметка…" = "Learning…";
@@ -330,8 +304,6 @@
 "ГБ" = "GB";
 "ТБ" = "TB";
 "мс" = "ms";
-"раскрыто" = "expanded";
-"свёрнуто" = "collapsed";
 
 /* Пароль и код в связке ключей */
 "Изменить…" = "Change…";
@@ -475,14 +447,11 @@
 
 "Язык интерфейса" = "Interface language";
 "Как в системе" = "System default";
-"Язык меняется сразу, в том числе в новых окнах входа." = "The language changes immediately, including in new sign-in windows.";
 "Встроенный CSD-скрипт больше 256 КиБ" = "The embedded CSD script exceeds 256 KiB";
 "CsdScriptBase64: некорректный Base64" = "CsdScriptBase64: invalid Base64";
 "CSD-скрипт должен быть в UTF-8, начинаться с #! и не содержать нулевых байтов" = "The CSD script must be UTF-8, start with #! and contain no NUL bytes";
 "Укажите CsdWrapper или встроенный CSD-скрипт, только один вариант" = "Choose either CsdWrapper or an embedded CSD script";
-"Встроить CSD-скрипт…" = "Embed CSD script…";
 "Скрипт встроен в профиль" = "The script is embedded in the profile";
-"Заменить…" = "Replace…";
 "Не удалось прочитать CSD-скрипт: %@" = "Could not read the CSD script: %@";
 "Удалить" = "Remove";
 
@@ -539,7 +508,6 @@
 "Сервер" = "Server";
 "Открыть OpenConnect for Mac" = "Open OpenConnect for Mac";
 "Управление профилями…" = "Manage profiles…";
-"Режим, сети, параметры входа" = "Mode, networks, sign-in options";
 
 /* Profile-first setup assistant */
 "Мастер настройки" = "Setup assistant";
@@ -605,3 +573,25 @@
 "Добавьте CSD-скрипт для этого VPN, затем повторите вход." = "Add the CSD script for this VPN, then try signing in again.";
 "Добавить CSD-скрипт…" = "Add CSD script…";
 "Изменить CSD-скрипт…" = "Edit CSD script…";
+"Лицензии" = "Licenses";
+"Сеть определяется по маршрутизатору, без геолокации." = "The network is identified by its router, without location access.";
+"Сеть" = "Network";
+"Источники пароля и кода" = "Password and code sources";
+"Название и файл профиля" = "Profile name and file";
+"Совместимость и прокси" = "Compatibility and proxy";
+"Предпросмотр файла" = "File preview";
+"Не подключён" = "Disconnected";
+"Параметры профиля" = "Profile details";
+"Сохраните изменения перед подключением." = "Save changes before connecting.";
+"Сейчас подключён другой профиль: %@" = "Another profile is connected: %@";
+"Код из SMS нужно вводить при каждом подключении." = "Enter the SMS code for each connection.";
+"Записей: %@" = "Entries: %@";
+"Зон: %@" = "Zones: %@";
+"Затем сохраните профиль." = "Save the profile afterwards.";
+"необязательно — используем адрес VPN" = "optional — defaults to VPN address";
+"Уведомления профиля" = "Profile notifications";
+"Как в приложении" = "Use app settings";
+"Выключены" = "Off";
+"Укажите адрес VPN." = "Enter the VPN address.";
+"DNS-зона" = "DNS zone";
+"Резолвер" = "Resolver";

@@ -14,56 +14,34 @@ struct GeneralView: View {
     @AppStorage("DeveloperMode") private var developer = false
 
     var body: some View {
-        Form {
-            Section {
+        NativeForm {
+            NativeSection {
                 Picker(L("Язык интерфейса"), selection: $language.selection) {
                     Text(L("Как в системе")).tag("system")
-                    Text("Русский").tag("ru") // i18n: не интерфейс — название языка на нём самом
+                    Text("Русский").tag("ru") // i18n: не интерфейс
                     Text("English").tag("en")
                 }
-            } footer: {
-                footnote(L("Язык меняется сразу, в том числе в новых окнах входа."))
+                Toggle(L("Запускать при входе в систему"), isOn: Binding(get: { autostart }, set: { set($0) })).disabled(busy)
             }
-            Section {
-                Button(L("Запустить мастер заново…")) { SetupFlow.shared.show() }
-            }
-            Section {
-                Toggle(L("Запускать при входе в систему"), isOn: Binding(get: { autostart }, set: { set($0) }))
-                    .disabled(busy)
-            } footer: {
-                footnote(L("Значок появится в строке меню сам; туннель при этом не поднимается."))
-            }
-            Section {
+            NativeSection(L("Подключение")) {
                 Picker(L("Автоподключение"), selection: Binding(get: { policy }, set: { setPolicy($0) })) {
                     Text(L("Вручную")).tag("manual")
                     Text(L("Восстанавливать прошлое подключение")).tag("resume")
                     ForEach(store.status.profiles.filter { !$0.isPassword }) { p in
                         Text(L("Всегда: %@", p.display)).tag("always " + p.name)
                     }
-                }
-                .disabled(busy)
-                Toggle(L("Не подключаться автоматически в этой сети"), isOn: Binding(get: { skipHere }, set: { setSkip($0) }))
-                    .disabled(busy)
-            } header: {
-                Text(L("Подключение"))
-            } footer: {
-                footnote(L("Сеть определяется по маршрутизатору, без геолокации. Если сессия истекла, автоподключение остановится и меню покажет «Нужен вход»."))
+                }.disabled(busy)
+                Toggle(L("Не подключаться автоматически в этой сети"), isOn: Binding(get: { skipHere }, set: { setSkip($0) })).disabled(busy)
+                Text(L("Сеть определяется по маршрутизатору, без геолокации.")).font(.caption).foregroundStyle(.secondary)
             }
-            Section {
+            NativeSection {
+                Button(L("Запустить мастер заново…")) { SetupFlow.shared.show() }
                 Toggle(L("Режим разработчика"), isOn: $developer)
-            } footer: {
-                footnote(L("Добавляет в меню «Выйти совсем (сброс входа)»: следующий вход пройдёт с формой."))
+                    .help(L("Добавляет в меню «Выйти совсем (сброс входа)»: следующий вход пройдёт с формой."))
             }
-            if let note {
-                Section { Label(note, systemImage: "exclamationmark.triangle").foregroundStyle(Palette.warn) }
-            }
-            Section {
-                Label(L("Выход из приложения (⌘Q) не отключает VPN: туннелем управляет супервизор."),
-                      systemImage: "info.circle")
-                    .font(.system(size: 12)).foregroundStyle(.secondary)
-            }
+            if let note { Footnote(note).foregroundStyle(Palette.warn) }
+            Footnote(L("Выход из приложения (⌘Q) не отключает VPN: туннелем управляет супервизор."))
         }
-        .formStyle(.grouped)
         .navigationTitle(L("Общие"))
         .onAppear { refresh() }
     }
@@ -71,6 +49,7 @@ struct GeneralView: View {
     private func footnote(_ text: String) -> some View { Footnote(text) }
 
     private func refresh() {
+        if CommandLine.arguments.contains("--stage") { return }
         DispatchQueue.global(qos: .userInitiated).async {
             let on = OCMacClient.shared.autostart()
             let p = OCMacClient.shared.autoconnect()

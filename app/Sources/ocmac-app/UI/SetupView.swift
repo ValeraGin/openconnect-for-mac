@@ -275,7 +275,7 @@ private struct SetupNetworkEditor: View {
     }
 }
 /// AppKit keeps address/login fields single-line even with long pasted text.
-private struct SetupInput: NSViewRepresentable {
+struct SetupInput: NSViewRepresentable {
     @Binding var text: String
     let label: String
     var placeholder = ""
