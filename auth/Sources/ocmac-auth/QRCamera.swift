@@ -27,20 +27,34 @@ final class QRCameraScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
         list.first { $0.deviceType == .builtInWideAngleCamera } ?? list.first
     }
 
-    func start(_ device: AVCaptureDevice) throws {
-        session.beginConfiguration()
-        session.inputs.forEach { session.removeInput($0) }
-        let input = try AVCaptureDeviceInput(device: device)
-        if session.canAddInput(input) { session.addInput(input) }
-        if session.outputs.isEmpty {
-            let out = AVCaptureVideoDataOutput()
-            out.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
-            out.alwaysDiscardsLateVideoFrames = true
-            out.setSampleBufferDelegate(self, queue: queue)
-            if session.canAddOutput(out) { session.addOutput(out) }
+    func start(_ device: AVCaptureDevice, completion: @escaping (Error?) -> Void) {
+        // Device creation, configuration, start and stop must share one queue.
+        // These operations can block on a camera driver; never run them in UI.
+        queue.async {
+            do {
+                self.session.beginConfiguration()
+                do {
+                    defer { self.session.commitConfiguration() }
+                    self.session.inputs.forEach { self.session.removeInput($0) }
+                    let input = try AVCaptureDeviceInput(device: device)
+                    guard self.session.canAddInput(input) else { throw NSError(domain: "CameraInput", code: 1) }
+                    self.session.addInput(input)
+                    if self.session.outputs.isEmpty {
+                        let out = AVCaptureVideoDataOutput()
+                        out.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
+                        out.alwaysDiscardsLateVideoFrames = true
+                        out.setSampleBufferDelegate(self, queue: self.queue)
+                        guard self.session.canAddOutput(out) else { throw NSError(domain: "CameraOutput", code: 1) }
+                        self.session.addOutput(out)
+                    }
+                }
+                if !self.session.isRunning { self.session.startRunning() }
+                guard self.session.isRunning else { throw NSError(domain: "CameraStart", code: 1) }
+                ModalCallbacks.perform { completion(nil) }
+            } catch {
+                ModalCallbacks.perform { completion(error) }
+            }
         }
-        session.commitConfiguration()
-        queue.async { if !self.session.isRunning { self.session.startRunning() } }
     }
 
     func stop() {
@@ -53,7 +67,7 @@ final class QRCameraScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDeleg
         guard Date().timeIntervalSince(last) > 0.25, let pb = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         last = Date()
         let found = Self.payloads(pixelBuffer: pb)
-        if !found.isEmpty { DispatchQueue.main.async { self.onPayloads?(found) } }
+        if !found.isEmpty { ModalCallbacks.perform { [weak self] in self?.onPayloads?(found) } }
     }
 
     /// Тот же путь, что у QR из файла. Проверяется без камеры — на кадре,
@@ -71,6 +85,9 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
     private let at: Date
     private let select: String?
     private let scanner = QRCameraScanner()
+    private let permission = CameraPermissionRequest()
+    private var cameraGeneration = 0
+    private var waitingForPermission = false
     private var window: NSWindow!
     private var status: NSTextField!
     private var picker: NSPopUpButton!
@@ -187,33 +204,51 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
         if let frames = ProcessInfo.processInfo.environment["OCMAC_SELFTEST_CAMERA_FRAMES"], !frames.isEmpty {
             return fromFrames(frames.split(separator: ":").map(String.init))
         }
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .authorized: break
-        case .notDetermined:
-            var granted: Bool?
-            AVCaptureDevice.requestAccess(for: .video) { ok in DispatchQueue.main.async { granted = ok } }
-            let deadline = Date().addingTimeInterval(120)
-            while granted == nil && Date() < deadline {
-                RunLoop.current.run(mode: .modalPanel, before: Date().addingTimeInterval(0.1))
-            }
-            if granted != true { return (nil, L("доступ к камере не дан — секрет можно вставить или выбрать файл QR")) }
-        default:
-            return (nil, L("доступ к камере запрещён: Системные настройки → Конфиденциальность и безопасность → Камера — разрешите OpenConnect for Mac или терминалу, из которого входите"))
-        }
-        devices = QRCameraScanner.cameras()
-        guard let device = QRCameraScanner.preferred(devices) else { return (nil, L("камера не найдена")) }
         build(withPreview: true)
-        if let i = devices.firstIndex(of: device) { picker.selectItem(at: i) }
-        scanner.onPayloads = { [weak self] found in self?.handle(found) }
-        do { try scanner.start(device) } catch { return (nil, L("камера не включилась: %@", error.localizedDescription)) }
         running = true
-        Log.info("камера: включена (\(device.localizedName)), ищу QR второго фактора")
+        scanner.onPayloads = { [weak self] found in self?.handle(found) }
+        waitingForPermission = true
+        setStatus(L("Ожидаю разрешение на камеру…"))
+        picker.isEnabled = false
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        let t = Timer(timeInterval: timeout, repeats: false) { [weak self] _ in self?.finish() }
+        let t = Timer(timeInterval: timeout, repeats: false) { [weak self] _ in
+            guard let self else { return }
+            self.setStatus(self.waitingForPermission
+                ? L("доступ к камере не дан — секрет можно вставить или выбрать файл QR")
+                : L("QR с камеры не прочитан — можно вставить секрет или выбрать файл QR"))
+            self.finish()
+        }
         RunLoop.main.add(t, forMode: .modalPanel)
+        permission.start { [weak self] granted in
+            guard let self, self.running else { return }
+            self.waitingForPermission = false
+            guard granted else {
+                self.setStatus(L("доступ к камере запрещён: Системные настройки → Конфиденциальность и безопасность → Камера — разрешите OpenConnect for Mac или терминалу, из которого входите"))
+                self.finish(); return
+            }
+            self.setStatus(L("Подключаю камеру…"))
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                let devices = QRCameraScanner.cameras()
+                ModalCallbacks.perform { [weak self] in
+                    guard let self, self.running else { return }
+                    self.devices = devices
+                    guard let device = QRCameraScanner.preferred(devices) else {
+                        self.setStatus(L("камера не найдена")); self.finish(); return
+                    }
+                    self.picker.removeAllItems()
+                    self.picker.addItems(withTitles: devices.map(\.localizedName))
+                    self.picker.isHidden = devices.count < 2
+                    if let i = devices.firstIndex(of: device) { self.picker.selectItem(at: i) }
+                    self.startCamera(device)
+                }
+            }
+        }
         NSApp.runModal(for: window)
         t.invalidate()
+        running = false
+        permission.cancel()
+        cameraGeneration += 1
         scanner.stop()
         window.orderOut(nil)
         Log.info("камера: выключена" + (result == nil ? "" : ", запись найдена"))
@@ -262,16 +297,39 @@ final class QRCameraWindow: NSObject, NSWindowDelegate {
     @objc private func cameraChanged() {
         let i = picker.indexOfSelectedItem
         guard devices.indices.contains(i) else { return }
-        try? scanner.start(devices[i])
+        startCamera(devices[i])
     }
 
-    @objc private func cancel() { finish() }
+    private func startCamera(_ device: AVCaptureDevice) {
+        cameraGeneration += 1
+        let ticket = cameraGeneration
+        picker.isEnabled = false
+        setStatus(L("Подключаю камеру…"))
+        scanner.start(device) { [weak self] error in
+            guard let self, self.running, self.cameraGeneration == ticket else { return }
+            if let error {
+                self.setStatus(L("камера не включилась: %@", error.localizedDescription))
+                self.finish()
+            } else {
+                self.picker.isEnabled = true
+                self.setStatus(L("ищу QR…"))
+                Log.info("камера: включена, ищу QR второго фактора")
+            }
+        }
+    }
+
+    @objc func cancel() {
+        setStatus(L("QR с камеры не прочитан — можно вставить секрет или выбрать файл QR"))
+        finish()
+    }
 
     func windowWillClose(_ notification: Notification) { finish() }
 
     private func finish() {
         guard running else { return }
         running = false
+        permission.cancel()
+        cameraGeneration += 1
         scanner.stop()
         NSApp.stopModal()
     }

@@ -329,7 +329,8 @@ final class TeachDialog: NSObject, NSTextFieldDelegate {
     private var secretRow: NSStackView?
     private var qrButton: NSButton?
     private var cameraButton: NSButton?
-    private var cameraActive = false
+    private var activeCamera: QRCameraWindow?
+    private var timedOut = false
     private var verifyLabel: NSTextField?
     private var secret: String?
     private var params = TOTPParams()
@@ -517,17 +518,19 @@ final class TeachDialog: NSObject, NSTextFieldDelegate {
     }
 
     func run(timeout: TimeInterval = 180) -> Output? {
+        timedOut = false
         build()
 
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         // Не ответили за три минуты — ничего не сохраняем: туннель ждёт.
         let t = Timer(timeInterval: timeout, repeats: false) { [weak self] _ in
-            // Если открыто окно камеры, первый abortModal закроет его, второй —
-            // само окно сохранения.
-            let nested = self?.cameraActive == true
-            NSApp.abortModal()
-            if nested { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { NSApp.abortModal() } }
+            guard let self else { return }
+            self.timedOut = true
+            // Close only our nested modal. scanCamera aborts the outer alert
+            // once the camera has unwound; no delayed abort can hit another UI.
+            if let camera = self.activeCamera { camera.cancel() }
+            else { NSApp.abortModal() }
         }
         RunLoop.main.add(t, forMode: .modalPanel)
         let response = alert.runModal()
@@ -625,9 +628,11 @@ final class TeachDialog: NSObject, NSTextFieldDelegate {
 
     @objc private func scanCamera() {
         guard let code = input.code, let at = input.codeAt else { return }
-        cameraActive = true
-        let r = QRCameraWindow(code: code, at: at).run()
-        cameraActive = false
+        let camera = QRCameraWindow(code: code, at: at)
+        activeCamera = camera
+        let r = camera.run()
+        activeCamera = nil
+        if timedOut { NSApp.abortModal(); return }
         if let e = r.entry {
             accept(e, source: L("с камеры"))
         } else {

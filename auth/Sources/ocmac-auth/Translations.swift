@@ -114,6 +114,8 @@ enum Translations {
         "из ссылки": "from the link",
         "ищу QR…": "looking for a QR code…",
         "камера": "camera",
+        "Ожидаю разрешение на камеру…": "Waiting for camera permission…",
+        "Подключаю камеру…": "Starting camera…",
         "камера не включилась: %@": "the camera did not start: %@",
         "камера не найдена": "no camera found",
         "кнопка": "button",
