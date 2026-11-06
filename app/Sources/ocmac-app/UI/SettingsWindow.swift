@@ -8,7 +8,8 @@ struct SettingsWindow: View {
     var body: some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 8) { AppMark(size: 24); Text("OpenConnect").fontWeight(.semibold) }.padding(12)
+                Text("OpenConnect").fontWeight(.semibold)
+                    .frame(height: 24, alignment: .leading).padding(12)
                 ForEach(SettingsPage.allCases) { item in
                     if item == .general || item == .about { Divider().padding(.vertical, 8) }
                     Button { page = item } label: {
