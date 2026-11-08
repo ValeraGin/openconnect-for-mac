@@ -89,6 +89,9 @@ final class OCMacClient: @unchecked Sendable {
             bad.error = L("ocmac status --json вернул не JSON")
             return bad
         }
+        // Settings edit file profiles. Legacy sections remain available to CLI
+        // users, but must not resurrect deleted files in the application's menu.
+        s.useFileProfiles(Set(ProfileStore.list()))
         // MTU в `status --short` нет, а показать его хочется: берём из той
         // же строки netstat, что и счётчики, лишнего процесса не заводим.
         if let t = Traffic.read(tundev: s.tundev) { s.mtu = t.mtu }

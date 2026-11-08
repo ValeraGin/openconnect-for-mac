@@ -70,6 +70,7 @@ final class TeachRecorder: NSObject, WKScriptMessageHandler {
         if let p = body["password"] as? String, !p.isEmpty { password = p }
         if let c = body["code"] as? String, !c.isEmpty { code = c; codeAt = Date() }
         guard !fields.isEmpty || button != nil else { return }
+        if fields.isEmpty, let button, steps.last?.button == button { return }
         let step = Step(page: page, fields: fields, button: button)
         let sig = Set(fields.map(\.selector))
         // То же окно — те же поля: повтор после ошибки, «показать пароль»,
@@ -154,12 +155,27 @@ final class TeachRecorder: NSObject, WKScriptMessageHandler {
           // предлагать сохранить вместо настоящего.
           function codeLike(e, v) {
             var ac = (e.getAttribute('autocomplete') || '').toLowerCase().split(/\\s+/);
-            var mode = (e.getAttribute('inputmode') || '').toLowerCase();
-            var len = parseInt(e.getAttribute('maxlength') || '0', 10);
             var n = (e.getAttribute('name') || '') + ' ' + (e.id || '');
-            return ac.indexOf('one-time-code') >= 0 || mode === 'numeric' || (len > 0 && len <= 8) ||
+            return ac.indexOf('one-time-code') >= 0 ||
                    /otp|totp|one.?time|code|pin/i.test(n) || /^[0-9]{4,8}$/.test(String(v).trim());
           }
+          function passwordField(e) {
+            return typeOf(e) === 'password' ||
+              /^(current-password|new-password)$/.test(e.autocomplete || '') ||
+              /^(password|passwd|pass)$/i.test(e.name || e.id || '');
+          }
+          // Some portals clear or hide fields in their click handler before
+          // submit. Keep secrets from actual user edits across SSO pages.
+          function rememberSecret(e) {
+            if (!window.__ocmacTeachOn || !trustedSubmit(e)) return;
+            var el = e.target;
+            if (!el || !el.matches('input,textarea') || !visible(el)) return;
+            var v = String(el.value || '');
+            if (!v || !passwordField(el) || codeLike(el, v)) return;
+            window.webkit.messageHandlers.ocmacTeach.postMessage({fields: [], password: v});
+          }
+          document.addEventListener('input', rememberSecret, true);
+          document.addEventListener('change', rememberSecret, true);
           function defaultButton(form) {
             if (!form) return null;
             var b = form.querySelector('button:not([type]),button[type=submit],input[type=submit],input[type=image]');
@@ -173,7 +189,7 @@ final class TeachRecorder: NSObject, WKScriptMessageHandler {
               return visible(e) && skip.indexOf(typeOf(e)) < 0 && String(e.value || '') !== '';
             });
             if (!inputs.length && !buttonOnlyOk) return;
-            var pw = inputs.filter(function (e) { return typeOf(e) === 'password' && !codeLike(e, e.value); });
+            var pw = inputs.filter(function (e) { return passwordField(e) && !codeLike(e, e.value); });
             var userBefore = null;
             if (pw.length) {
               var before = inputs.filter(function (e) {
@@ -184,7 +200,7 @@ final class TeachRecorder: NSObject, WKScriptMessageHandler {
             var fields = [], password = '', code = '';
             inputs.forEach(function (e) {
               var v = String(e.value), k = 'manual', why = 'вводит человек';
-              if (typeOf(e) === 'password') {
+              if (passwordField(e)) {
                 if (codeLike(e, v)) {
                   k = 'totp'; why = 'поле кода с типом password';
                   if (/^[0-9]{4,8}$/.test(v.trim())) code = v.trim();
@@ -218,7 +234,7 @@ final class TeachRecorder: NSObject, WKScriptMessageHandler {
             var b = e.target && e.target.closest ? e.target.closest('button,input[type=submit],input[type=image]') : null;
             if (!b) return;
             var isSubmit = b.tagName === 'BUTTON' ? (!b.getAttribute('type') || typeOf(b) === 'submit') : true;
-            if (isSubmit && b.form) return;          // это поймает submit
+            if (isSubmit && b.form) { snapshot(b.form, b, false); return; }
             snapshot(b.form || null, b, false);
           }, true);
         })(\(u));

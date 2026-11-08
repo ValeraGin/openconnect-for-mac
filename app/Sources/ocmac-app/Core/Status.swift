@@ -127,6 +127,12 @@ struct Status: Equatable {
     /// Сессия поднята в прокси-режиме: интерфейса, маршрутов и зон нет.
     var isProxySession: Bool { mode == "proxy" && state != .down }
 
+    mutating func useFileProfiles(_ names: Set<String>) {
+        profiles.removeAll { !names.contains($0.name) }
+        if state == .down && !names.contains(profile) { profile = ""; needsLogin = false }
+        if !names.contains(defaultProfile) { defaultProfile = "" }
+    }
+
     var routesOn: [RouteEntry] { routes.filter { $0.enabled } }
     var zonesApplied: [ZoneEntry] { zones.filter { $0.applied } }
 

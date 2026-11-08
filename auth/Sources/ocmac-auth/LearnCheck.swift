@@ -521,7 +521,7 @@ final class LearnCheck: NSObject, WKNavigationDelegate, WKScriptMessageHandler, 
                             // Дальше «человек» — синтетические события теста.
                             rec.trustSynthetic = true
                             rec.apply(to: self.webView)
-                            self.after(0.2) { self.checkTeachCapture(rec) { self.checkCodeAsPassword(rec, then) } }
+                            self.after(0.2) { self.checkTeachCapture(rec) { self.checkCodeAsPassword(rec) { self.checkEarlyPassword(rec, then) } } }
                         }
                     }
                 }
@@ -536,6 +536,7 @@ final class LearnCheck: NSObject, WKNavigationDelegate, WKScriptMessageHandler, 
         eval("""
         window.__teachReset();
         document.getElementById('tu').value = 'alice'; document.getElementById('tp').value = 'верный подложный 1';
+        document.getElementById('tp').dispatchEvent(new Event('input', {bubbles:true}));
         document.getElementById('tgo').click();
         window.__teachReset();
         document.getElementById('tu').value = 'alice'; document.getElementById('tp').value = 'верный подложный 2';
@@ -657,6 +658,40 @@ final class LearnCheck: NSObject, WKNavigationDelegate, WKScriptMessageHandler, 
         }
         CIContext().render(img, to: buf)
         return buf
+    }
+
+    private func checkEarlyPassword(_ rec: TeachRecorder, _ then: @escaping () -> Void) {
+        rec.enabled = true; rec.trustSynthetic = true
+        rec.apply(to: webView)
+        rec.forgetSecrets()
+        after(0.2) {
+            self.eval("""
+            var f = document.createElement('form'); f.id = 'earlyForm';
+            f.innerHTML = '<input id="earlyPass" type="password" maxlength="8"><button id="earlyGo" type="submit">Continue</button>';
+            f.onsubmit = function(e) { e.preventDefault(); };
+            document.body.appendChild(f);
+            var p = document.getElementById('earlyPass'); p.value = 'abc!123';
+            p.dispatchEvent(new Event('input', {bubbles:true}));
+            'ok'
+            """) { _ in
+                self.after(0.2) {
+                    self.ok("password edit retained before submit, short maxlength is not OTP", rec.password == "abc!123")
+                    rec.forgetSecrets()
+                    self.eval("""
+                    document.getElementById('earlyGo').onclick = function() { document.getElementById('earlyPass').value = ''; };
+                    document.getElementById('earlyGo').click();
+                    document.getElementById('earlyForm').remove(); 'ok'
+                    """) { _ in
+                        self.after(0.2) {
+                            self.ok("password captured before portal click handler clears field", rec.password == "abc!123")
+                            rec.enabled = false; rec.trustSynthetic = false
+                            rec.apply(to: self.webView)
+                            rec.forgetSecrets(); then()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private func checkTeachCapture(_ rec: TeachRecorder, _ then: @escaping () -> Void) {

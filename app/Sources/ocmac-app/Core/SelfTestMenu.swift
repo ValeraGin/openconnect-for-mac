@@ -21,6 +21,16 @@ extension SelfTest {
         func titles(_ m: NSMenu) -> [String] { m.items.map { $0.title } }
         let L0 = { (s: String) in L(s) }
 
+        var fileStatus = Fixture.status(.connected)
+        let deleted = fileStatus.profiles.first!.name
+        fileStatus.useFileProfiles([])
+        check("deleted file profiles cannot reappear from legacy config", fileStatus.profiles.isEmpty && fileStatus.defaultProfile.isEmpty)
+        check("active session remains visible after deleting its profile", !fileStatus.profile.isEmpty)
+        fileStatus.state = .down; fileStatus.useFileProfiles([])
+        check("removed disconnected profile cannot be reconnect target", fileStatus.profile.isEmpty)
+        let emptyFiles = build(fileStatus)
+        check("menu removes deleted profile rows", !titles(emptyFiles).contains { $0.hasPrefix(deleted) })
+
         let connected = build(Fixture.status(.connected))
         let t = titles(connected)
         check("меню: «Отключить VPN» первым пунктом", t.first == L0("Отключить VPN"), t.prefix(3).joined(separator: " | "))

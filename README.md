@@ -129,6 +129,9 @@ directories, and it only touches what it created itself. See
   Split-DNS domains come from the gateway’s split list, not its default search suffix. A changed
   session or externally edited profile invalidates confirmation. You can then check
   a work resource.
+  The app lists `.ocmac` files in both settings and the menu. Legacy
+  `profiles.conf` entries remain available through the CLI; they do not reappear
+  in the app after you delete the corresponding profile files.
 
 ![Connection window](assets/connection.png)
 
