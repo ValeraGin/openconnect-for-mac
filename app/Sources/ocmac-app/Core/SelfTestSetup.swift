@@ -143,6 +143,17 @@ extension SelfTest {
         t.check("missing DNS cannot enable policy", !networks.useDNS)
         let parsed = Status.parse(json: "{\"gateway_routes\":[\"10.20.0.0/16\"],\"gateway_domain\":\"corp.example.com\",\"gateway_session\":\"123 456\"}")
         t.check("setup status wire carries real gateway suggestions", parsed?.gatewayRoutes == ["10.20.0.0/16"] && parsed?.gatewayDomain == "corp.example.com" && parsed?.gatewaySession == "123 456")
+        var doomed = ProfileDoc(); doomed.fileName = "delete-test"; doomed.url = "vpn.example.test/group"
+        t.check("deletion fixture saved", ProfileStore.save(doomed) == nil)
+        let old = ProfileStore.stamp(doomed.fileName)
+        doomed.user = "changed"; _ = ProfileStore.save(doomed)
+        t.check("deletion refuses concurrent edit", ProfileStore.remove(doomed.fileName, expected: old) != nil && ProfileStore.read(doomed.fileName) != nil)
+        t.check("deletion rejects path traversal", ProfileStore.remove("../outside", expected: old) != nil)
+        t.check("deletion removes file and backup", ProfileStore.remove(doomed.fileName, expected: ProfileStore.stamp(doomed.fileName)) == nil && !fm.fileExists(atPath: ProfileStore.path(doomed.fileName) + ".bak"))
+        t.check("deletion leaves other profiles intact", ProfileStore.read(existing.fileName) != nil)
+        doomed.keychainService = "test.vpn"; doomed.user = "tester"
+        let refs = OCMacClient.credentialReferences(doomed)
+        t.check("credential deletion targets exact profile references", refs.map(\.service) == ["test.vpn", "test.vpn"] && refs.map(\.account) == ["tester", "totp/tester"])
         t.check("setup initial config is not selected implicitly on restart", { flow.start(); return flow.doc.url.isEmpty && flow.savedID == nil }())
     }
 }

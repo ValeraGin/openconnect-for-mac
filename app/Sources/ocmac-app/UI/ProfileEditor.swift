@@ -118,6 +118,8 @@ struct ProfileEditorView: View {
     enum EditorAlert {
         case unsaved(Next)
         case changedOnDisk
+        case deleteProfile
+        case deleteFailed(String)
         case exists(String)
     }
 
@@ -167,12 +169,17 @@ struct ProfileEditorView: View {
         case .unsaved: return L("Несохранённые правки в «%@»", doc.fileName.isEmpty ? L("новый профиль") : doc.fileName)
         case .changedOnDisk: return L("Файл профиля изменился на диске")
         case .exists(let name): return L("Профиль «%@» уже есть", name)
+        case .deleteProfile: return L("Удалить профиль «%@»?", (doc.name.isEmpty ? doc.fileName : doc.name))
+        case .deleteFailed: return L("Не удалось удалить профиль")
         case .none: return ""
         }
     }
 
     private func alertMessage(_ a: EditorAlert) -> String {
         switch a {
+        case .deleteProfile:
+            return L("Можно удалить только профиль или также его пароль и TOTP из связки ключей. Эти данные могут использоваться другими профилями той же учётной записи. Несохранённые правки будут потеряны.")
+        case .deleteFailed(let why): return why
         case .unsaved:
             return L("Сохранить их, прежде чем открыть другой профиль?")
         case .changedOnDisk:
@@ -185,6 +192,12 @@ struct ProfileEditorView: View {
     @ViewBuilder
     private func alertButtons(_ a: EditorAlert) -> some View {
         switch a {
+        case .deleteProfile:
+            Button(L("Только профиль"), role: .destructive) { deleteProfile(forgetCredentials: false) }
+            Button(L("Профиль и данные входа"), role: .destructive) { deleteProfile(forgetCredentials: true) }
+            Button(L("Отмена"), role: .cancel) {}
+        case .deleteFailed:
+            Button(L("Закрыть"), role: .cancel) {}
         case .unsaved(let next):
             Button(L("Сохранить")) { save(then: { go(next) }) }
             Button(L("Не сохранять"), role: .destructive) { go(next) }
@@ -320,6 +333,13 @@ struct ProfileEditorView: View {
                 .help(L("Управление профилями…"))
                 .popover(isPresented: $showProfileList) { sidebar.frame(width: 280, height: 360) }
                 Spacer()
+                if loadedName != nil {
+                    Button(role: .destructive) { alert = .deleteProfile } label: {
+                        Label(L("Удалить профиль…"), systemImage: "trash")
+                    }
+                    .disabled(store.busy != nil || secretBusy || (store.status.profile == loadedName && store.status.state != .down))
+                    .help(L("Перед удалением активного профиля отключите VPN."))
+                }
             }
             .padding(.horizontal, 20).padding(.vertical, 12)
                         NativeForm { profilePage }
@@ -1244,6 +1264,29 @@ struct ProfileEditorView: View {
         if !CommandLine.arguments.contains("--stage") && !CommandLine.arguments.contains("--selftest") { UserDefaults.standard.set(name, forKey: "LastSettingsProfile") }
         systemState = nil
         checkSystem()
+    }
+
+    private func deleteProfile(forgetCredentials: Bool) {
+        guard let name = loadedName, let disk, !saving, !secretBusy, store.busy == nil,
+              store.status.profile != name || store.status.state == .down else { return }
+        // Use the saved profile's references, never unsaved changes to User/service.
+        guard let text = disk.text else { return }
+        let saved = ProfileDoc.parse(text, fileName: name)
+        saving = true
+        DispatchQueue.global(qos: .userInitiated).async {
+            let error: String?
+            if ProfileStore.stamp(name) != disk { error = L("Профиль изменился. Откройте его заново перед удалением.") }
+            else if forgetCredentials, let why = OCMacClient.shared.forgetCredentials(saved) { error = why }
+            else { error = ProfileStore.remove(name, expected: disk) }
+            DispatchQueue.main.async {
+                saving = false
+                if let error { alert = .deleteFailed(error); return }
+                for key in ["LastProfile", "LastSettingsProfile"] where UserDefaults.standard.string(forKey: key) == name {
+                    UserDefaults.standard.removeObject(forKey: key)
+                }
+                newDoc(); reloadList(); store.refresh()
+            }
+        }
     }
 
     private func newDoc() {

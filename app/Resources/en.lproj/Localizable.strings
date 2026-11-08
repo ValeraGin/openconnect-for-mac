@@ -614,3 +614,23 @@
 "DNS-политика этой сессии неизвестна. Переподключитесь или выберите режим вручную." = "This session’s DNS policy is unknown. Reconnect or choose a mode manually.";
 
 "Суффикс дополняет короткие имена. Он не ограничивает режим «Все домены». Изменения вступят в силу при следующем подключении." = "The suffix completes short names. It does not restrict All domains mode. Changes take effect on the next connection.";
+
+"Не удалось удалить данные входа из связки ключей. Профиль сохранён." = "Could not remove credentials from Keychain. The profile was retained.";
+
+"Некорректное имя профиля." = "Invalid profile name.";
+
+"Профиль изменился. Откройте его заново перед удалением." = "The profile changed. Reopen it before deleting.";
+
+"Удалить профиль «%@»?" = "Delete profile “%@”?";
+
+"Не удалось удалить профиль" = "Could not delete profile";
+
+"Можно удалить только профиль или также его пароль и TOTP из связки ключей. Эти данные могут использоваться другими профилями той же учётной записи. Несохранённые правки будут потеряны." = "You can delete just the profile or also its password and TOTP from Keychain. Other profiles for the same account may use these credentials. Unsaved changes will be lost.";
+
+"Только профиль" = "Profile only";
+
+"Профиль и данные входа" = "Profile and credentials";
+
+"Удалить профиль…" = "Delete profile…";
+
+"Перед удалением активного профиля отключите VPN." = "Disconnect VPN before deleting its active profile.";

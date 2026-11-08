@@ -131,7 +131,11 @@ directories, and it only touches what it created itself. See
   a work resource.
   The app lists `.ocmac` files in both settings and the menu. Legacy
   `profiles.conf` entries remain available through the CLI; they do not reappear
-  in the app after you delete the corresponding profile files.
+  in the app after you delete the corresponding profile files. **Delete profile…** next to the profile selector
+  offers to remove just the file or also its password and TOTP from Keychain.
+  Shared account credentials may affect other profiles; active profiles must be
+  disconnected first. Deletion checks for external file changes and removes its
+  `.bak`/`.tmp` sidecars.
 
 ![Connection window](assets/connection.png)
 

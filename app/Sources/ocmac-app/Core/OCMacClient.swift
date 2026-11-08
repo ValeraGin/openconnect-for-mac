@@ -100,8 +100,22 @@ final class OCMacClient: @unchecked Sendable {
 
     // --- секреты профиля -------------------------------------------------
 
-    /// Сохранить пароль в связке ключей. Пароль идёт на стандартный вход
-    /// клиента, в аргументах его нет. nil — сохранено, иначе причина.
+    /// The same service/account pairs the CLI uses for password and TOTP.
+    static func credentialReferences(_ doc: ProfileDoc) -> [(service: String, account: String)] {
+        let service = doc.keychainService.isEmpty ? "ru.ocmac.client" : doc.keychainService
+        let user = doc.user.isEmpty ? NSUserName() : doc.user
+        return [(service, user), (service, "totp/" + user)]
+    }
+
+    func forgetCredentials(_ doc: ProfileDoc) -> String? {
+        for ref in Self.credentialReferences(doc) {
+            let r = Shell.run("/usr/bin/security", ["delete-generic-password", "-s", ref.service, "-a", ref.account], timeout: 20)
+            if r.code != 0 && r.code != 44 { return L("Не удалось удалить данные входа из связки ключей. Профиль сохранён.") }
+        }
+        return nil
+    }
+
+    /// Пароль передаётся клиенту через stdin. nil — сохранено, иначе причина.
     func savePassword(profile: String, password: String) -> String? {
         guard let binary else { return L("OpenConnect for Mac не найден") }
         let r = Shell.run(binary, ["secret", "set-password", profile, "--stdin"], stdin: password + "\n", timeout: 20)

@@ -680,6 +680,17 @@ enum ProfileStore {
         DiskStamp(mtime: mtime(name), text: read(name))
     }
 
+    /// Refuse to delete a changed file or a path outside the profile directory.
+    static func remove(_ name: String, expected: DiskStamp) -> String? {
+        guard ProfileCheck.validFileName(name) else { return L("Некорректное имя профиля.") }
+        guard expected.text != nil, stamp(name) == expected else { return L("Профиль изменился. Откройте его заново перед удалением.") }
+        do {
+            try FileManager.default.removeItem(atPath: path(name))
+            for suffix in [".bak", ".tmp"] { try? FileManager.default.removeItem(atPath: path(name) + suffix) }
+            return nil
+        } catch { return error.localizedDescription }
+    }
+
     // Пишем во временный файл рядом и переименовываем: оборванная запись не
     // должна оставить профиль в половинном виде. Прошлую версию сохраняем
     // рядом с суффиксом .bak — правку руками отменить иначе нечем.
