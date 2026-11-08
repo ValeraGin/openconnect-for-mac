@@ -47,6 +47,26 @@ class AppUpdateTest(unittest.TestCase):
         self.assertEqual(agent['ProgramArguments'],[str(self.dest/'Contents/MacOS/ocmac-app')])
         self.assertTrue(any('--installation-check' in a for a in self.calls))
         self.assertTrue(any('bootout' in a for a in self.calls));self.assertTrue(any('bootstrap' in a for a in self.calls))
+    def system_install(self):
+        system=self.home/'system-apps/OpenConnect for Mac.app'
+        system.parent.mkdir()
+        self.dest.rename(system)
+        self.dest.symlink_to(system)
+        return system
+    def test_system_install_keeps_user_compatibility_link(self):
+        system=self.system_install()
+        with patch.object(u,'run',side_effect=self.run_command): result=u.update(self.source,self.home)
+        self.assertEqual(result.resolve(),system.resolve())
+        self.assertTrue(self.dest.is_symlink())
+        self.assertEqual(self.dest.resolve(),system.resolve())
+        self.assertEqual(u.info(system)['CFBundleExecutable'],'ocmac-app')
+    def test_failed_system_update_preserves_link_and_previous_bundle(self):
+        system=self.system_install();self.fail_check=True
+        with patch.object(u,'run',side_effect=self.run_command):
+            with self.assertRaisesRegex(RuntimeError,'matching client'):u.update(self.source,self.home)
+        self.assertTrue(self.dest.is_symlink())
+        self.assertEqual(u.info(system)['CFBundleExecutable'],'previous-app')
+
     def test_missing_client_rolls_back_app_and_login_item(self):
         self.fail_check=True;original=self.agent.read_bytes()
         with patch.object(u,'run',side_effect=self.run_command):

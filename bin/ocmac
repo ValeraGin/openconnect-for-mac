@@ -3934,6 +3934,8 @@ app_keep_legacy_path() {
 
 app_sync_copy() { # источник
     local src="$1" dst="$APP_USER_COPY"
+    # Update the real installation, keeping the legacy launcher link intact.
+    if [ -L "$dst" ] && [ -d "$dst" ]; then dst=$(cd "$dst" && pwd -P); fi
     case "$src" in */opt/openconnect-for-mac/ocmac.app|*/Cellar/openconnect-for-mac/*/ocmac.app) ;; *) printf '%s' "$src"; return 0 ;; esac
     if [ -d "$dst" ] && [ "$(app_bundle_version "$dst")" = "$(app_bundle_version "$src")" ] \
        && diff -qr "$src/Contents" "$dst/Contents" >/dev/null 2>&1; then

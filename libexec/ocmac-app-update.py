@@ -64,6 +64,8 @@ def pids(binary):
 def update(source, home, start=False):
     expected = validate(source)
     dest = home / 'Applications/OpenConnect for Mac.app'
+    # Preserve a compatibility link to an installation in /Applications.
+    if dest.is_symlink() and dest.is_dir(): dest = dest.resolve()
     old = info(dest)
     old_name = old.get('CFBundleExecutable', EXECUTABLE)
     if not re.fullmatch(r'[A-Za-z0-9_.-]+', old_name): raise RuntimeError('Invalid app executable name')
