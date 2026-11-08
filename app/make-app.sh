@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Собрать ocmac.app — бандл для меню-бара. SwiftPM даёт обычный исполняемый
-# файл; меню-бару нужен бандл с Info.plist, где LSUIElement выключает Dock.
+# файл; обычный бандл виден в Apps, а Dock скрывается через activationPolicy.
 #
 #   ./make-app.sh                 → app/.build/ocmac.app
 #   ./make-app.sh /Applications   → /Applications/ocmac.app
@@ -113,7 +113,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
         </dict>
     </dict></array>
     <key>LSMinimumSystemVersion</key><string>14.4</string>
-    <key>LSUIElement</key><true/>
+    <key>LSUIElement</key><false/>
     <key>NSCameraUsageDescription</key><string>OpenConnect for Mac читает QR второго фактора с экрана телефона, чтобы сохранить секрет одноразового кода. Кадры никуда не сохраняются.</string>
     <key>CFBundleURLTypes</key>
     <array><dict>
