@@ -8,7 +8,7 @@
 <meta property="og:type" content="website"><meta property="og:image" content="${base}assets/social-card-${lang}.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="${base}assets/icon.svg">
-<link rel="stylesheet" href="${base}landing.css?v=20261110-1">
+<link rel="stylesheet" href="${base}landing.css?v=20261110-2">
 </head>
 <body>
 <a class="skip" href="#content">$skip</a>
@@ -23,6 +23,7 @@
       <p class="tagline">$tagline</p>
       <p class="lead">$lead</p>
       <p class="actions"><a class="button" href="#install">$install_cta</a><a class="link" href="https://github.com/ValeraGin/openconnect-for-mac">$source_cta ↗</a></p>
+      <p class="requirements">$requirements</p>
       <p><a class="link" href="guide/#profile">$profile_link →</a></p>
     </div>
     <figure><img src="${base}assets/demo-${lang}.gif" width="$demo_width" height="$demo_height" alt="$demo_alt"><figcaption>$demo_caption</figcaption></figure>
@@ -35,19 +36,10 @@
     <div><h2>$p5_t</h2><p>$p5_d</p></div>
   </section>
   <p class="muted">$alternative_intro <a href="https://gitlab.com/openconnect/openconnect-gui">OpenConnect GUI</a>. $alternative_focus</p>
-  <section class="compatibility" aria-labelledby="compatibility-title">
-    <h2 id="compatibility-title">$compat_title</h2>
-    <p>$compat_live</p>
-    <p>$compat_ci</p>
-    <p class="muted">$compat_limits</p>
-    <p><a class="link" href="https://github.com/ValeraGin/openconnect-for-mac/issues/new?template=gateway_report.yml">$feedback_link →</a></p>
-    <p class="muted">$feedback_note</p>
-  </section>
   <section class="install" id="install">
     <h2>$install_title</h2>
     <div class="code"><pre id="commands">$install_command</pre><button type="button" data-copy="commands" data-done="$copied">$copy</button></div>
     <p>$install_note</p>
-    <p class="muted">$requirements</p>
     <p><a class="link" href="guide/#profile">$profile_link →</a></p>
     <p><a class="link" href="guide/">$guide_link →</a></p>
   </section>

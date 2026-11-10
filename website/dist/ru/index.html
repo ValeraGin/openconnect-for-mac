@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#eef0ea">
-<title>OpenConnect for Mac — рабочий VPN на Mac</title><meta name="description" content="Рабочий VPN на Mac: вход через SSO, нужные сети и корпоративный DNS, восстановление после сна. Открытый клиент на основе OpenConnect.">
-<meta property="og:title" content="OpenConnect for Mac — рабочий VPN на Mac"><meta property="og:description" content="Рабочий VPN на Mac: вход через SSO, нужные сети и корпоративный DNS, восстановление после сна. Открытый клиент на основе OpenConnect.">
+<title>OpenConnect for Mac — рабочий VPN на Mac</title><meta name="description" content="Клиент для подключения к AnyConnect-совместимому VPN вашей организации. Вход через SSO, выбор сетей и DNS, управление из строки меню.">
+<meta property="og:title" content="OpenConnect for Mac — рабочий VPN на Mac"><meta property="og:description" content="Клиент для подключения к AnyConnect-совместимому VPN вашей организации. Вход через SSO, выбор сетей и DNS, управление из строки меню.">
 <meta property="og:type" content="website"><meta property="og:image" content="https://valeragin.github.io/openconnect-for-mac/assets/social-card-ru.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="../assets/icon.svg">
-<link rel="stylesheet" href="../landing.css?v=20261110-1">
+<link rel="stylesheet" href="../landing.css?v=20261110-2">
 <script>(function(){var k="ocmac-lang",d=document.documentElement,c=null;
 try{c=localStorage.getItem(k)}catch(e){}
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest(".languages a[lang]");
@@ -34,8 +34,9 @@ if(w==="ru")location.replace("../ru/"+location.hash)})()</script>
     <div>
       <h1>OpenConnect for Mac</h1>
       <p class="tagline">Рабочий VPN на Mac</p>
-      <p class="lead">SSO, нужные сети и восстановление после сна. Нативное меню macOS, открытый код на основе OpenConnect.</p>
+      <p class="lead">Клиент для подключения к AnyConnect-совместимому VPN вашей организации. Вход через SSO, выбор сетей и DNS, управление из строки меню.</p>
       <p class="actions"><a class="button" href="#install">Установить</a><a class="link" href="https://github.com/ValeraGin/openconnect-for-mac">Исходники на GitHub ↗</a></p>
+      <p class="requirements">macOS 14.4+ · доступ к AnyConnect-совместимому шлюзу</p>
       <p><a class="link" href="guide/#profile">У меня есть готовый профиль от коллеги →</a></p>
     </div>
     <figure><img src="../assets/demo-ru.gif" width="373" height="237" alt="Окно подключения OpenConnect for Mac: отключено, подключение, подключено и пауза"><figcaption>Настоящие окна с демо-данными. Снято в фоне, контролы неактивны.</figcaption></figure>
@@ -48,19 +49,10 @@ if(w==="ru")location.replace("../ru/"+location.hash)})()</script>
     <div><h2>Переживает сон и смену сети</h2><p>Супервизор сам восстанавливает соединение после сна, смены Wi-Fi и обрыва связи и не открывает окно входа без спроса.</p></div>
   </section>
   <p class="muted">У OpenConnect уже есть графический клиент — <a href="https://gitlab.com/openconnect/openconnect-gui">OpenConnect GUI</a>. OpenConnect for Mac я делаю под свой повседневный сценарий: многошаговый SSO-вход в WebKit, переключение отдельных сетей и DNS-зон, пауза без завершения сессии и готовый профиль от коллеги.</p>
-  <section class="compatibility" aria-labelledby="compatibility-title">
-    <h2 id="compatibility-title">Где проверено</h2>
-    <p>Реальное подключение: AnyConnect-совместимый шлюз с Keycloak, macOS 26 на Apple Silicon. Автор использует этот сценарий ежедневно.</p>
-    <p>Автоматические проверки: ocserv и тестовые SSO-шлюзы. Это не подтверждение совместимости с реальными Okta или Microsoft Entra ID.</p>
-    <p class="muted">Минимальная версия — macOS 14.4. На Intel и macOS 14.4–15 нет проверки на реальном устройстве. Чистая установка и первый вход на другом Mac пока не проверены.</p>
-    <p><a class="link" href="https://github.com/ValeraGin/openconnect-for-mac/issues/new?template=gateway_report.yml">Проверили свой шлюз? Расскажите, как прошло →</a></p>
-    <p class="muted">Короткий отчёт поможет уточнить совместимость. Название компании, адрес шлюза и данные входа не нужны.</p>
-  </section>
   <section class="install" id="install">
     <h2>Установка</h2>
     <div class="code"><pre id="commands">/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/ValeraGin/openconnect-for-mac/main/install.sh)&quot;</pre><button type="button" data-copy="commands" data-done="Скопировано">Копировать</button></div>
     <p>Команда загрузит установщик с GitHub. Он предложит поставить недостающие инструменты Apple и Homebrew, установит OpenConnect for Mac и запустит приложение. Для системного помощника понадобится пароль администратора Mac.</p>
-    <p class="muted">macOS 14.4+ · доступ к AnyConnect-совместимому шлюзу</p>
     <p><a class="link" href="guide/#profile">У меня есть готовый профиль от коллеги →</a></p>
     <p><a class="link" href="guide/">Установка и первое подключение →</a></p>
   </section>
