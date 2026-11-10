@@ -1,9 +1,5 @@
 # Visual assets
 
-Current pages use only the favicon and social share cards. Screenshots, animations
-and illustrations below are retained for existing URLs and are not rendered on the site.
-
-
 ## Current identity — 2026-10-16
 
 The approved graphite-and-lime switch is drawn in code. `dist/assets/mark.svg`
