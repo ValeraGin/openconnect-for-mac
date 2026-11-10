@@ -2,61 +2,69 @@
 <html lang="$lang">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#eef0ea">
 <title>$title</title><meta name="description" content="$description">
 <meta property="og:title" content="$title"><meta property="og:description" content="$description">
 <meta property="og:type" content="website"><meta property="og:image" content="${base}assets/social-card-${lang}.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/svg+xml" href="${base}assets/icon.svg">
-<link rel="stylesheet" href="${base}landing.css?v=20261022-3">
-</head>
-<body>
+<link rel="icon" href="${base}assets/icon.svg"><link rel="stylesheet" href="${base}style.css?v=20261110">
+</head><body>
 <a class="skip" href="#content">$skip</a>
-<header class="top wrap">
-  <a class="brand" href="./"><img src="${base}assets/icon.svg" width="28" height="28" alt="">OpenConnect for Mac</a>
-  <nav><a href="https://github.com/ValeraGin/openconnect-for-mac">GitHub</a><span class="languages" aria-label="$language_label"><a href="${base}./" lang="en" $en_current>EN</a> / <a href="${base}ru/" lang="ru" $ru_current>RU</a></span></nav>
+<header class="wrap">
+<a href="./" class="brand">OpenConnect for Mac</a>
+<nav aria-label="$docs_title"><a href="https://github.com/ValeraGin/openconnect-for-mac">GitHub</a><span class="languages" aria-label="$language_label"><a href="${base}./" lang="en" $en_current>EN</a> / <a href="${base}ru/" lang="ru" $ru_current>RU</a></span></nav>
 </header>
 <main id="content" class="wrap">
-  <section class="hero">
-    <div>
-      <h1>$h1</h1>
-      <p class="lead">$lead</p>
-      <p class="actions"><a class="button" href="#install">$install_cta</a><a class="link" href="https://github.com/ValeraGin/openconnect-for-mac">$source_cta ↗</a></p>
-      <p><a class="link" href="guide/#profile">$profile_link →</a></p>
-    </div>
-    <figure><img src="${base}assets/demo-${lang}.gif" width="373" height="595" alt="$demo_alt"><figcaption>$demo_caption</figcaption></figure>
-  </section>
-  <section class="pros" aria-label="$pros_label">
-    <div><h2>$p1_t</h2><p>$p1_d</p></div>
-    <div><h2>$p2_t</h2><p>$p2_d</p></div>
-    <div><h2>$p3_t</h2><p>$p3_d</p></div>
-    <div><h2>$p4_t</h2><p>$p4_d</p></div>
-    <div><h2>$p5_t</h2><p>$p5_d</p></div>
-  </section>
-  <p class="muted">$alternative_intro <a href="https://gitlab.com/openconnect/openconnect-gui">OpenConnect GUI</a>. $alternative_focus</p>
-  <section class="compatibility" aria-labelledby="compatibility-title">
-    <h2 id="compatibility-title">$compat_title</h2>
-    <p>$compat_live</p>
-    <p>$compat_ci</p>
-    <p class="muted">$compat_limits</p>
-    <p><a class="link" href="https://github.com/ValeraGin/openconnect-for-mac/issues/new?template=gateway_report.yml">$feedback_link →</a></p>
-    <p class="muted">$feedback_note</p>
-  </section>
-  <section class="install" id="install">
-    <h2>$install_title</h2>
-    <div class="code"><pre id="commands">$install_command</pre><button type="button" data-copy="commands" data-done="$copied">$copy</button></div>
-    <p>$install_note</p>
-    <p class="muted">$requirements</p>
-    <p><a class="link" href="guide/#profile">$profile_link →</a></p>
-    <p><a class="link" href="guide/">$guide_link →</a></p>
-  </section>
-</main>
-<footer class="wrap">
-  <a href="$troubleshooting_url">$troubleshooting</a>
-  <a href="https://github.com/ValeraGin/openconnect-for-mac">GitHub</a>
-  <span>$license</span>
-  <span>$disclaimer</span>
-</footer>
+<h1>OpenConnect for Mac</h1>
+<p>$lead</p>
+<p class="meta">macOS 14.4+ / Swift + Bash / OpenConnect / MIT</p>
+<nav class="contents" aria-label="$docs_title"><a href="#install">$install_title</a> · <a href="#configuration">$config_title</a> · <a href="#commands">$commands_title</a> · <a href="guide/">$guide_link</a></nav>
+<section id="install"><h2>$install_title</h2><p>$requirements</p>
+<div class="command"><pre id="install-command"><code>$install_command</code></pre><button type="button" data-copy="install-command" data-done="$copied">$copy</button></div>
+<p>$install_note</p><p><a href="guide/#profile">$profile_link</a> · <a href="guide/">$guide_link</a></p></section>
+<section id="behavior"><h2>$behavior_title</h2>
+<table><thead><tr><th scope="col">$component</th><th scope="col">$behavior</th></tr></thead><tbody>
+<tr><th scope="row">$route_label</th><td>$route_text</td></tr>
+<tr><th scope="row">$dns_label</th><td>$dns_text</td></tr>
+<tr><th scope="row">$sso_label</th><td>$sso_text</td></tr>
+<tr><th scope="row">$pause_label</th><td>$pause_text</td></tr>
+<tr><th scope="row">$recovery_label</th><td>$recovery_text</td></tr>
+<tr><th scope="row">$csd_label</th><td>$csd_text</td></tr>
+</tbody></table></section>
+<section id="configuration"><h2>$config_title</h2><p><code>~/.config/ocmac/profiles/work.ocmac</code></p>
+<pre><code>[Connection]
+Name = Work
+Url = vpn.example.com/employees
+User = your-login
+
+[Routes]
+10.0.0.0/8
+
+[DNS]
+corp.example.com = vpn
+
+[Auth]
+Password = ask
+Totp = off</code></pre>
+<p>$config_note</p><p>$config_auth</p></section>
+<section id="commands"><h2>$commands_title</h2>
+<pre><code>ocmac connect work
+ocmac disconnect
+ocmac pause
+ocmac resume
+ocmac status --json
+ocmac autoconnect resume
+ocmac doctor
+ocmac logs -n 100
+ocmac import work.ocmac
+ocmac export work team.ocmac</code></pre></section>
+<section id="compatibility"><h2>$limits_title</h2><p>$limits_text</p><p>$limits_more</p></section>
+<section id="documentation"><h2>$docs_title</h2><ul>
+<li><a href="guide/">$guide_link</a></li>
+<li><a href="$troubleshooting_url">$troubleshooting</a></li>
+<li><a href="https://github.com/ValeraGin/openconnect-for-mac/blob/main/etc/example.ocmac">$example_link</a></li>
+<li><a href="https://github.com/ValeraGin/openconnect-for-mac/issues/new?template=gateway_report.yml">$issue_link</a></li>
+<li><a href="https://github.com/ValeraGin/openconnect-for-mac">$source_cta</a></li>
+</ul></section></main>
+<footer class="wrap"><p>$license</p><p>$disclaimer</p></footer>
 <script src="${base}copy.js"></script>
-</body>
-</html>
+</body></html>

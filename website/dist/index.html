@@ -2,13 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#eef0ea">
-<title>OpenConnect for Mac — work VPN on your Mac</title><meta name="description" content="Work VPN on your Mac: SSO sign-in, selected networks and corporate DNS, and recovery after sleep. An open-source client built on OpenConnect.">
-<meta property="og:title" content="OpenConnect for Mac — work VPN on your Mac"><meta property="og:description" content="Work VPN on your Mac: SSO sign-in, selected networks and corporate DNS, and recovery after sleep. An open-source client built on OpenConnect.">
+<title>OpenConnect for Mac</title><meta name="description" content="OpenConnect client for macOS. Native menu bar UI, WebKit SSO, per-profile routes, split DNS and a command-line interface.">
+<meta property="og:title" content="OpenConnect for Mac"><meta property="og:description" content="OpenConnect client for macOS. Native menu bar UI, WebKit SSO, per-profile routes, split DNS and a command-line interface.">
 <meta property="og:type" content="website"><meta property="og:image" content="https://valeragin.github.io/openconnect-for-mac/assets/social-card-en.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" type="image/svg+xml" href="assets/icon.svg">
-<link rel="stylesheet" href="landing.css?v=20261022-3">
+<link rel="icon" href="assets/icon.svg"><link rel="stylesheet" href="style.css?v=20261110">
 <script>(function(){var k="ocmac-lang",d=document.documentElement,c=null;
 try{c=localStorage.getItem(k)}catch(e){}
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest(".languages a[lang]");
@@ -22,54 +20,64 @@ if(w==="ru")location.replace("ru/"+location.hash)})()</script>
 <link rel="alternate" hreflang="en" href="https://valeragin.github.io/openconnect-for-mac/">
 <link rel="alternate" hreflang="ru" href="https://valeragin.github.io/openconnect-for-mac/ru/">
 <link rel="alternate" hreflang="x-default" href="https://valeragin.github.io/openconnect-for-mac/">
-</head>
-<body>
+</head><body>
 <a class="skip" href="#content">Skip to content</a>
-<header class="top wrap">
-  <a class="brand" href="./"><img src="assets/icon.svg" width="28" height="28" alt="">OpenConnect for Mac</a>
-  <nav><a href="https://github.com/ValeraGin/openconnect-for-mac">GitHub</a><span class="languages" aria-label="Language"><a href="./" lang="en" aria-current="page">EN</a> / <a href="ru/" lang="ru" >RU</a></span></nav>
+<header class="wrap">
+<a href="./" class="brand">OpenConnect for Mac</a>
+<nav aria-label="Documentation"><a href="https://github.com/ValeraGin/openconnect-for-mac">GitHub</a><span class="languages" aria-label="Language"><a href="./" lang="en" aria-current="page">EN</a> / <a href="ru/" lang="ru" >RU</a></span></nav>
 </header>
 <main id="content" class="wrap">
-  <section class="hero">
-    <div>
-      <h1>Work VPN on your Mac</h1>
-      <p class="lead">SSO, the networks you need, and recovery after sleep. A native macOS menu, open source, built on OpenConnect.</p>
-      <p class="actions"><a class="button" href="#install">Install</a><a class="link" href="https://github.com/ValeraGin/openconnect-for-mac">Source on GitHub ↗</a></p>
-      <p><a class="link" href="guide/#profile">I have a configured profile from a teammate →</a></p>
-    </div>
-    <figure><img src="assets/demo-en.gif" width="373" height="595" alt="OpenConnect for Mac menu: connect, switch off a network, pause"><figcaption>The real menu on a demo profile.</figcaption></figure>
-  </section>
-  <section class="pros" aria-label="Why OpenConnect for Mac">
-    <div><h2>SSO: fill in multiple sign-in steps</h2><p>Teach the web form once. Passwords and one-time codes come from Keychain, KeePassXC or your own command. Cisco single-sign-on-v2 uses a WebKit sign-in window.</p></div>
-    <div><h2>Work networks through VPN; everything else uses your usual connection</h2><p>Only the networks in your profile go through the tunnel; everything else, home network included, goes the usual way. Switch them from the menu without reconnecting.</p></div>
-    <div><h2>Smart DNS: yours and the company’s at once</h2><p>Company domains resolve through the company DNS, everything else through yours. Switch individual zones from the menu. System DNS stays untouched.</p></div>
-    <div><h2>A native macOS menu with pause</h2><p>Built with SwiftUI. Pause removes the app’s routes and DNS zones while keeping the VPN session; resume restores them. Profiles and logs open from the menu.</p></div>
-    <div><h2>Survives sleep and network changes</h2><p>The supervisor brings the connection back after sleep, Wi-Fi changes and dropped links, without opening a sign-in window on its own.</p></div>
-  </section>
-  <p class="muted">OpenConnect already has a graphical client: <a href="https://gitlab.com/openconnect/openconnect-gui">OpenConnect GUI</a>. I build OpenConnect for Mac around my daily workflow: multi-step SSO in WebKit, individual route and DNS-zone switches, pausing without ending the session, and a ready-to-use profile from a teammate.</p>
-  <section class="compatibility" aria-labelledby="compatibility-title">
-    <h2 id="compatibility-title">Where it has been tested</h2>
-    <p>Real connection: an AnyConnect-compatible gateway with Keycloak, macOS 26 on Apple Silicon. Used daily by the author.</p>
-    <p>Automated checks: ocserv and test SSO gateways. These do not confirm compatibility with real Okta or Microsoft Entra ID deployments.</p>
-    <p class="muted">Requires macOS 14.4+. Intel and macOS 14.4–15 have no real-device verification. A clean installation and first sign-in on another Mac have not been tested yet.</p>
-    <p><a class="link" href="https://github.com/ValeraGin/openconnect-for-mac/issues/new?template=gateway_report.yml">Tried your gateway? Tell us how it went →</a></p>
-    <p class="muted">A short report helps clarify compatibility. No company name, gateway address or sign-in details needed.</p>
-  </section>
-  <section class="install" id="install">
-    <h2>Install</h2>
-    <div class="code"><pre id="commands">/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/ValeraGin/openconnect-for-mac/main/install.sh)&quot;</pre><button type="button" data-copy="commands" data-done="Copied">Copy</button></div>
-    <p>This command downloads the installer from GitHub. It offers to install missing Apple tools and Homebrew, installs OpenConnect for Mac and opens the app. The system helper needs your Mac administrator password.</p>
-    <p class="muted">macOS 14.4+ · access to an AnyConnect-compatible gateway</p>
-    <p><a class="link" href="guide/#profile">I have a configured profile from a teammate →</a></p>
-    <p><a class="link" href="guide/">Installation &amp; first connection →</a></p>
-  </section>
-</main>
-<footer class="wrap">
-  <a href="https://github.com/ValeraGin/openconnect-for-mac/blob/main/TROUBLESHOOTING.en.md">If it does not work</a>
-  <a href="https://github.com/ValeraGin/openconnect-for-mac">GitHub</a>
-  <span>MIT · no telemetry</span>
-  <span>Independent project, not an official OpenConnect product. Not affiliated with OpenConnect or Cisco. AnyConnect describes protocol compatibility.</span>
-</footer>
+<h1>OpenConnect for Mac</h1>
+<p>An AnyConnect-compatible VPN client for macOS. OpenConnect handles the tunnel; a native menu bar app and the ocmac CLI manage profiles, sign-in, routes and DNS.</p>
+<p class="meta">macOS 14.4+ / Swift + Bash / OpenConnect / MIT</p>
+<nav class="contents" aria-label="Documentation"><a href="#install">Install</a> · <a href="#configuration">Configuration</a> · <a href="#commands">Commands</a> · <a href="guide/">Installation guide</a></nav>
+<section id="install"><h2>Install</h2><p>Requires macOS 14.4+, Homebrew and access to an AnyConnect-compatible gateway. The project does not provide VPN servers.</p>
+<div class="command"><pre id="install-command"><code>/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/ValeraGin/openconnect-for-mac/main/install.sh)&quot;</code></pre><button type="button" data-copy="install-command" data-done="Copied">Copy</button></div>
+<p>Run as your regular user. The installer downloads source from GitHub, builds the app and requests administrator access for the system helper. Building may take several minutes.</p><p><a href="guide/#profile">Import a profile</a> · <a href="guide/">Installation guide</a></p></section>
+<section id="behavior"><h2>Behavior</h2>
+<table><thead><tr><th scope="col">Component</th><th scope="col">Behavior</th></tr></thead><tbody>
+<tr><th scope="row">Routes</th><td>Only the networks listed in the profile use the tunnel. Routes can be enabled and disabled from the menu.</td></tr>
+<tr><th scope="row">DNS</th><td>Split DNS uses /etc/resolver entries for listed domains. A gateway search suffix is not the list of domains to resolve through VPN.</td></tr>
+<tr><th scope="row">Sign-in</th><td>Cisco single-sign-on-v2 uses a WebKit window. Form rules can be recorded during sign-in. Expired authentication may require user input.</td></tr>
+<tr><th scope="row">Pause</th><td>Removes the app’s routes and DNS settings while retaining the tunnel session. Resume restores them.</td></tr>
+<tr><th scope="row">Recovery</th><td>The supervisor monitors the selected connection. Use autoconnect resume to restore it after an outage. Disconnect clears the selected connection.</td></tr>
+<tr><th scope="row">HostScan / CSD</th><td>Device assessment depends on the gateway. Use an organization-approved wrapper. A script can be embedded in a profile; opening a file does not execute it.</td></tr>
+</tbody></table></section>
+<section id="configuration"><h2>Configuration</h2><p><code>~/.config/ocmac/profiles/work.ocmac</code></p>
+<pre><code>[Connection]
+Name = Work
+Url = vpn.example.com/employees
+User = your-login
+
+[Routes]
+10.0.0.0/8
+
+[DNS]
+corp.example.com = vpn
+
+[Auth]
+Password = ask
+Totp = off</code></pre>
+<p>One .ocmac file describes one connection. The example sends only 10.0.0.0/8 through the tunnel. DNS for corp.example.com and its subdomains uses the gateway resolver; other domains use the normal connection.</p><p>This example uses manual password and code entry. Passwords and TOTP secrets can instead come from macOS Keychain, KeePassXC or a command. They are not stored as profile values.</p></section>
+<section id="commands"><h2>Commands</h2>
+<pre><code>ocmac connect work
+ocmac disconnect
+ocmac pause
+ocmac resume
+ocmac status --json
+ocmac autoconnect resume
+ocmac doctor
+ocmac logs -n 100
+ocmac import work.ocmac
+ocmac export work team.ocmac</code></pre></section>
+<section id="compatibility"><h2>Compatibility</h2><p>Used on macOS 26, Apple Silicon, with an AnyConnect-compatible gateway and Keycloak. Automated tests cover ocserv and synthetic SSO forms. They do not verify a production Okta or Microsoft Entra ID deployment.</p><p>Minimum deployment target: macOS 14.4. Intel and macOS 14.4–15 have not been verified on real devices. A clean installation and first sign-in on another Mac have not been verified. IPv6 tunnel routes are not configured.</p></section>
+<section id="documentation"><h2>Documentation</h2><ul>
+<li><a href="guide/">Installation guide</a></li>
+<li><a href="https://github.com/ValeraGin/openconnect-for-mac/blob/main/TROUBLESHOOTING.en.md">Troubleshooting</a></li>
+<li><a href="https://github.com/ValeraGin/openconnect-for-mac/blob/main/etc/example.ocmac">Example profile</a></li>
+<li><a href="https://github.com/ValeraGin/openconnect-for-mac/issues/new?template=gateway_report.yml">Report a gateway compatibility issue</a></li>
+<li><a href="https://github.com/ValeraGin/openconnect-for-mac">Source</a></li>
+</ul></section></main>
+<footer class="wrap"><p>MIT license. No telemetry.</p><p>Independent project. Not affiliated with Cisco or the OpenConnect project.</p></footer>
 <script src="copy.js"></script>
-</body>
-</html>
+</body></html>

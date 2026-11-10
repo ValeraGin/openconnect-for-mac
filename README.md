@@ -1,415 +1,197 @@
-<img src="assets/mark.svg" width="72" height="72" alt="OpenConnect for Mac">
-
 # OpenConnect for Mac
 
-[Website](https://valeragin.github.io/openconnect-for-mac/)
+[Website](https://valeragin.github.io/openconnect-for-mac/) · [Installation](INSTALL.md) · [Troubleshooting](TROUBLESHOOTING.en.md) · [Русский](README.ru.md)
 
-**English** · [Русский](README.ru.md)
+An AnyConnect-compatible VPN client for macOS. OpenConnect handles the tunnel.
+A native menu bar app and the `ocmac` CLI manage sign-in, profiles, routes and DNS.
 
-**Your work VPN, in your Mac’s menu bar.**
+Requires macOS 14.4+ and access to a compatible gateway. The project does not
+provide VPN servers. English and Russian interfaces. MIT license; no telemetry.
 
-An open-source, Cisco AnyConnect–compatible client built on
-[OpenConnect](https://www.infradead.org/openconnect/). Sign in with SSO,
-choose which networks go through the tunnel, and pause or resume from a
-native macOS menu. The supervisor reconnects after sleep and network changes.
-
-Free under the MIT license. Install through Homebrew, which builds the app
-on your Mac. Requires macOS 14.4+ and access to your own compatible VPN gateway;
-OpenConnect for Mac does not provide VPN servers.
-
-![OpenConnect for Mac menu: connect, toggle a network, pause](assets/demo.gif)
-
-<sub>The real menu on a demo profile: connect, switch off a network, pause.</sub>
-
-**Status:** a single-author tool used daily on a real AnyConnect gateway
-with a Keycloak identity provider. The app, the sign-in windows and the CLI
-support English and Russian, selectable in Settings; the longer guides,
-[INSTALL.md](INSTALL.md) and [TROUBLESHOOTING.md](TROUBLESHOOTING.md), are in
-Russian; the first-connection problems are also in
-[TROUBLESHOOTING.en.md](TROUBLESHOOTING.en.md). Version history is in [CHANGELOG.md](CHANGELOG.md).
-
-> Independent project, not an official OpenConnect product. Not affiliated with
-> the OpenConnect project or Cisco. “AnyConnect” describes protocol compatibility.
-
-The CLI is `ocmac`; profiles use `.ocmac`. Existing installations can be
-migrated with `ocmac migrate` followed by `ocmac prepare && sudo ocmac install`. Original user
-files are preserved. System setup stops the previous VPN session.
-
-## Quick install
-
-Open Terminal and run:
+## Install
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ValeraGin/openconnect-for-mac/main/install.sh)"
 ```
 
-The [installer](install.sh) offers to install missing Apple Command Line Tools
-and Homebrew, installs OpenConnect for Mac and its helper, and opens the menu app. It asks for
-administrator access when needed. Share one `.ocmac` file and the
-[profile installation guide](https://valeragin.github.io/openconnect-for-mac/guide/#profile)
-with a teammate. After installation, double-click their `.ocmac` file, enter their
-own username and choose **Connect**. Networks and DNS come from the profile.
-Choose English, Russian or System default in Settings → General → Interface language.
+Run as your regular user. The [installer](install.sh) offers missing Apple Command
+Line Tools and Homebrew, builds the app and installs the system helper.
+The helper requires administrator access. System setup may interrupt an existing
+VPN session. Building can take several minutes.
 
-
-## Why
-
-OpenConnect speaks the AnyConnect protocol, but on macOS the gaps are
-everything around it: gateways that only allow SAML login, a
-`vpnc-script` that routes all traffic and rewrites DNS, no reconnect after
-sleep, and no menu bar UI. OpenConnect for Mac fills those gaps without a kernel extension,
-a root daemon, or an Apple Developer ID.
-
-## How it works
-
-```
-ocmac connect
-  │
-  ├─ ocmac-auth (Swift, WKWebView)        runs as the user
-  │    init → SAML window → cookie → auth-reply → session token + server cert hash
-  │
-  └─ sudo -n ocmac-helper tunnel-start    root, the only NOPASSWD entry
-       ├─ openconnect --cookie-on-stdin --script "ocmac-helper vpnc" -b
-       └─ vpnc: ifconfig utunN, our routes, our /etc/resolver zones — nothing else
-
-ocmac supervise (LaunchAgent)             runs as the user, every 5 s
-       tunnel pid · kern.waketime · primary interface · routes in place
-```
-
-Privileged code lives in one file, [libexec/ocmac-helper](libexec/ocmac-helper):
-fixed subcommands, every argument validated, state only in root-owned
-directories, and it only touches what it created itself. See
-[SECURITY.md](SECURITY.md) for the threat model.
-
-## Features
-
-- **SSO login** (`single-sign-on-v2`) in a WebKit window: the window stays
-  hidden while a saved identity-provider session is enough, and appears only
-  when a human is needed.
-- **Autofill** with per-profile rules: username, password, TOTP, buttons,
-  multi-step forms. Rules are recorded by clicking the form (`ocmac learn`) or
-  by logging in once with "Remember how I sign in" (`ocmac connect --teach`).
-  Filling happens only on HTTPS hosts of the login chain started by the
-  gateway.
-- **Secrets** from the macOS Keychain, KeePassXC (`keepassxc-cli`) or any
-  command (e.g. `op item get … --otp`). TOTP secrets can be imported from
-  `otpauth://` and Google Authenticator export QR codes, including via the Mac
-  camera. Secrets never appear in process arguments.
-- **Split tunneling and split DNS**: only listed networks go through the
-  tunnel; DNS zones are added as `/etc/resolver` files. Both can be toggled
-  on a live connection.
-- **Pause**: remove routes and zones without dropping the session, resume
-  instantly without logging in again (⌥⌘P).
-- **Supervisor**: reconnects after sleep, network changes and dropped links;
-  stops a connection attempt that hangs for 90 seconds and tries again;
-  never opens a login window on its own; caps logins per hour.
-- **Proxy mode**: `openconnect --script-tun` + `ocproxy` gives a local SOCKS
-  proxy with no routes, no DNS changes and no root at all.
-- **English and Russian**: the app, the sign-in windows and CLI messages
-  follow the system language.
-- **Menu bar app**: a native macOS menu — "Connect VPN" / "Disconnect VPN" on
-  top, profiles as rows (the connected one shows its state and session time,
-  or the connection step while connecting; click another to connect it),
-  networks and DNS zones as checkmark submenus, pause and the usual commands
-  below. The menu bar icon fills step by step while connecting. Hold ⌥ while
-  opening the menu for connection details: tunnel address, gateway, MTU,
-  resolvers, speed, traffic, latency. Choose **Open OpenConnect for Mac** for a compact
-  window with a profile selector, connection status and Connect/Disconnect button.
-  The profile editor keeps network, proxy and advanced sign-in options under **Advanced**.
-  Settings hold the profile editor, notification
-  settings and diagnostics with logs. **Add a new profile…** starts with a blank address,
-  optional username and tunnel/SOCKS mode, then checks system readiness and
-  opens real sign-in. Prepared systems skip installation. Names come from the address;
-  existing files are preserved by choosing a unique file name. After connecting,
-  the assistant offers gateway-supplied subnets and DNS for review. Apply saves the
-  selected additions and applies them to that same live session; Skip retains existing
-  settings. Existing entries and disabled networks are preserved. All-IPv4 routing
-  requires an explicit choice. DNS policy is separate: all domains use the gateway DNS
-  only after you approve that mode. A search suffix does not restrict DNS to that domain.
-  Split-DNS domains come from the gateway’s split list, not its default search suffix. A changed
-  session or externally edited profile invalidates confirmation. You can then check
-  a work resource.
-  The app lists `.ocmac` files in both settings and the menu. Legacy
-  `profiles.conf` entries remain available through the CLI; they do not reappear
-  in the app after you delete the corresponding profile files. **Delete profile…** next to the profile selector
-  offers to remove just the file or also its password and TOTP from Keychain.
-  Shared account credentials may affect other profiles; active profiles must be
-  disconnected first. Deletion checks for external file changes and removes its
-  `.bak`/`.tmp` sidecars.
-
-![Connection window](assets/connection.png)
-
-## Try it without a VPN
-
-The interface runs on synthetic data, so you can look before installing
-anything that touches your network:
+For an existing Homebrew installation:
 
 ```bash
-ocmac ui-lab                                              # menu states in a browser page
-app/.build/ocmac.app/Contents/MacOS/ocmac-app --stage     # the real menu, every state at once
+brew upgrade openconnect-for-mac
+ocmac app upgrade
+ocmac doctor
 ```
 
-## Install
+If the helper is outdated, run `ocmac prepare && sudo ocmac install` again.
+See [INSTALL.md](INSTALL.md) for manual installation, migration and cleanup.
 
-Requires macOS 14.4+ and Command Line Tools (full Xcode is not needed).
+## Configuration
 
-```bash
-brew tap ValeraGin/openconnect-for-mac
-brew trust ValeraGin/openconnect-for-mac            # third-party tap: Homebrew refuses untrusted formulae
-brew install openconnect-for-mac                    # builds from source on your machine
-sudo ocmac install                    # once: helper, sudoers rule, LaunchAgent
-
-mkdir -p ~/.config/ocmac/profiles
-cp "$(brew --prefix openconnect-for-mac)"/share/openconnect-for-mac/examples/example.ocmac ~/.config/ocmac/profiles/main.ocmac
-$EDITOR ~/.config/ocmac/profiles/main.ocmac
-
-ocmac secret set-password
-ocmac connect --show
-ocmac app start && ocmac app autostart on
-```
-
-Why a source build: without a Developer ID a prebuilt app is quarantined by
-Gatekeeper, while a locally built one is not. `brew upgrade openconnect-for-mac` updates
-it; when a release changes the privileged helper, run `sudo ocmac install`
-once more (`ocmac doctor` says when the helper is behind). Uninstall in this order: `sudo ocmac uninstall`, then
-`brew uninstall openconnect-for-mac` — otherwise the root helper and its sudoers rule stay
-behind. Details (in Russian): [INSTALL.md](INSTALL.md).
-
-## Profile
-
-![Profile window](assets/profile.png)
-
-![Notification settings](assets/notifications.png)
-
-One file per connection, similar to WireGuard configs:
-`~/.config/ocmac/profiles/<name>.ocmac`. No secrets inside — only references
-to where they are stored, so a profile can be shared.
+One `.ocmac` file describes one connection. Create
+`~/.config/ocmac/profiles/work.ocmac` or import a file received from a teammate.
 
 ```ini
 [Connection]
-Name = Main
-Url  = vpn.example.com/employees
-User = alice
+Name = Work
+Url = vpn.example.com/employees
+User = your-login
 
 [Routes]
 10.0.0.0/8
-172.16.0.0/12
 
 [DNS]
-example.com      = 10.0.0.1
-corp.example.com = vpn          # "vpn" = resolver pushed by the gateway
+corp.example.com = vpn
 
 [Auth]
-Password = keychain             # auto | keychain | keepassxc | command | ask
-Totp     = keepassxc            # auto | keychain | keepassxc | command | sms | off
-KeepassEntry = Group/Entry
-
-[Health]
-Check = wiki.example.com:443    # what must answer after connecting
-
-[Autofill]
-# step 1 — idp.example.com/login
-fill  password input[id=password]
-click button[type=submit]
-# step 2 — idp.example.com/otp
-fill  totp input[id=otp]
-click input[id=kc-login]
+Password = ask
+Totp = off
 ```
 
-Proxy mode instead of a tunnel:
+- `[Routes]`: IPv4 networks sent through the tunnel. Other traffic uses the normal connection.
+- `[DNS]`: domains resolved by a specific resolver. `vpn` uses a gateway-supplied DNS server. Subdomains are included; more specific zones take priority.
+- `[Auth]`: credential sources. This example uses manual password and code entry.
+  Keychain, KeePassXC and custom commands are also supported.
+- A gateway search suffix is separate from its split-DNS policy. It is not a complete list of VPN DNS domains.
 
-```ini
-[Connection]
-Mode = proxy
-
-[Proxy]
-Port        = 11080
-SystemProxy = off     # on — set this SOCKS on the active network service
-```
+Validate before connecting:
 
 ```bash
-brew install ocproxy
-ocmac connect
-curl --socks5-hostname 127.0.0.1:11080 https://wiki.example.com
+ocmac profile-check ~/.config/ocmac/profiles/work.ocmac
+ocmac connect work
 ```
 
-A full annotated example: [etc/example.ocmac](etc/example.ocmac).
+See [etc/example.ocmac](etc/example.ocmac) for all profile settings. The legacy
+`profiles.conf`, `networks.conf` and `zones.conf` formats remain available through
+the CLI. Export converts one legacy connection to a self-contained `.ocmac`.
 
-### External HostScan script
+### Sign-in rules
 
-For gateways that request a device report, set your script in the profile:
-
-```ini
-[Connection]
-CsdWrapper = ~/vpn/csd-post.sh
+```bash
+ocmac connect work --teach
 ```
 
-Use a wrapper approved for your organization's device policy. The bundled
-`examples/csd-wrapper.sh` contains placeholder device report values; it is a
-protocol example, not a compliance checker or a ready corporate configuration.
-Do not deploy its default report as a device assessment. Make your approved
-script executable with `chmod u+x "$HOME/vpn/csd-post.sh"`. Paths with spaces
-work; do not put quotes around the value in the profile.
-The script runs as your user before SSO, using OpenConnect's wrapper
-arguments and `CSD_HOSTNAME`, `CSD_TOKEN`, `CSD_SHA256` environment variables.
-It submits the prepared report itself; stdout is diagnostic output, not a
-report for OpenConnect for Mac to submit. OpenConnect for Mac waits for the gateway, then resumes SSO.
-A required HostScan check without a configured wrapper stops before SSO.
-Missing files, execution errors and non-zero exit codes also stop sign-in.
-Whether the report satisfies the device policy is decided by the gateway.
+Complete the organization’s web sign-in. After success, choose whether to save
+form rules, the password in Keychain and the one-time code source. Saving the
+profile itself does not save a password. Password and TOTP secret values belong
+in credential storage, not in the profile.
 
-### Embed CSD in a portable profile
+`ocmac learn work` provides manual form annotation. Rules can also be managed with
+`ocmac rules show`, `ocmac rules import` and `ocmac rules clear`. See
+[INSTALL.md](INSTALL.md) for multi-step forms and custom credential commands.
 
-In the profile editor's advanced settings, choose **Embed CSD script…**.
-The file is stored in `[Connection] CsdScriptBase64`, as one line of Base64.
-The editor and `ocmac export` preserve it, so a colleague needs just one `.ocmac`.
-Use a UTF-8 script starting with `#!`, up to 256 KiB. Choose either
-`CsdWrapper` or `CsdScriptBase64`.
+### HostScan / CSD
 
-Import extracts the script into `~/.config/ocmac/csd/`; `sudo ocmac install`
-prepares its system copy. The installer handles both steps with `--profile`
-alone, without `--csd`. Reading, validating and importing never run the script.
-After changing the embedded script, rerun `sudo ocmac install` to update its
-system copy.
+If required by the gateway, obtain an organization-approved wrapper.
+`CsdWrapper` refers to a file; `CsdScriptBase64` embeds the script in the profile.
+Opening or validating a profile does not execute it. Connecting can run CSD and
+credential commands, so review configuration from other people.
 
-### Connecting through an upstream proxy
+```bash
+ocmac prepare
+sudo ocmac install
+ocmac csd-status work
+```
 
-Set `[Connection] UpstreamProxy = http://127.0.0.1:10808` or
-`socks5://127.0.0.1:10808` to send password login, SSO and VPN transport through
-one proxy. Both `Mode = tunnel` and `Mode = proxy` support it. `[Proxy]` still
-configures the local SOCKS endpoint exposed to applications after VPN login.
+The installed system copy must match the profile. An embedded script is portable,
+but still requires system preparation. The [example wrapper](etc/csd-wrapper.sh)
+contains sample assessment results; it is not a device assessment ready for deployment.
 
-HTTP CONNECT and SOCKS5 without authentication are supported, with an explicit
-port (1–65535) and DNS hostname or IPv4 address. Credentials, paths and IPv6
-literals are rejected. Native tunnels require helper 0.8.3+ (`sudo ocmac install`).
-It applies to password login, SSO and form learning.
-Explicit upstream always disables DTLS: transport uses TCP. Proxy failure does
-not fall back to a direct connection to the external gateway. WebKit/URLSession
-exclude loopback destinations from proxying; this setting is not intended for
-SSO gateways running on localhost.
+### Import and export
 
-CSD wrappers receive `http_proxy`, `https_proxy`, `all_proxy` and uppercase
-variants, with `NO_PROXY` cleared. Custom scripts must honor these variables;
-OpenConnect for Mac does not intercept arbitrary sockets opened by a script. The proxy must
-already be running. An empty setting preserves existing connection behavior.
+```bash
+ocmac import team.ocmac
+ocmac import cisco.xml
+ocmac export work team.ocmac
+```
+
+Cisco XML imports server addresses, not routes, DNS or credentials. A `.ocmac`
+export preserves routes, DNS, form rules and embedded CSD. It does not retrieve
+credential-store secrets. Review User, local paths and custom commands before
+sharing. Keep corporate configuration within your team.
+
+### SOCKS mode
+
+`[Connection] Mode = proxy` uses `ocproxy` instead of a system tunnel. It requires
+`brew install ocproxy`. This mode does not install VPN routes or DNS zones.
+Set `[Proxy] Port = 11080` and choose whether to enable the system SOCKS proxy.
 
 ## Commands
 
-```
-ocmac connect [profile] [--show] [--teach] [-v]   log in and bring the tunnel up
+```bash
+ocmac connect work
+ocmac connect work --teach
 ocmac disconnect
-ocmac logout                          disconnect and forget identity-provider sessions
-ocmac status [--short|--json]
-ocmac profiles | import <file> | export <profile> [file] | order [name…]
-ocmac routes on|off|toggle <CIDR>     also: apply | clear | status
-ocmac dns on|off|toggle <zone>        also: apply | clear | status
-ocmac autoconnect [manual|resume|always <profile>] who brings the tunnel up
-ocmac report [file] [--raw]           support report; hosts and logins masked
-ocmac logs [-f] [-n N] [source…]      all logs merged by time (supervisor, openconnect, auth, app)
-ocmac profile-check <file>            will the client accept this profile file (the editor asks before saving)
-ocmac state [--json]                  runtime state in one place: profile, auto-connect, access, flags
-ocmac pause | resume | toggle
-ocmac secret set-password|set-totp|status|code [profile]
-ocmac secret add-totp <profile> --screen|--camera|--stdin   add the TOTP secret from a QR on screen, the camera or an otpauth:// link
-ocmac secret import-qr <image> [--list] [--select NAME] [profile]
-ocmac learn [profile] [--probe] [--out <file>]    record login form rules by clicking
-ocmac rules show|import <file>|clear [profile]
-ocmac app start|stop|status | autostart on|off | devmode on|off
-ocmac supervisor status|start|stop|restart
-ocmac doctor                          diagnostics, changes nothing: parts, leftovers, stray sessions, routes
-ocmac cleanup                         remove leftovers after a crash (only ours)
+ocmac pause
+ocmac resume
+ocmac status --json
+ocmac doctor
+ocmac logs -n 100
+ocmac autoconnect resume
+ocmac import work.ocmac
+ocmac export work team.ocmac
+ocmac report report.txt
+```
+
+`ocmac help` lists all commands. `status --json` is the interface used by the app.
+`doctor` is read-only. Inspect generated reports before publishing them.
+
+## Connection lifecycle
+
+- `autoconnect resume` restores the last selected connection after an outage.
+- `autoconnect manual` disables fresh automatic sign-ins.
+- `autoconnect always work` selects a profile at login.
+- `pause` removes the app’s routes and DNS settings while retaining its session.
+- `disconnect` clears the selected connection and remains disconnected.
+
+The supervisor monitors the connection and retries with backoff. An expired SSO
+session can require user input. It does not open a sign-in window automatically.
+
+## Implementation
+
+| Component | Responsibility |
+| --- | --- |
+| `app/` | SwiftUI/AppKit menu bar app; no root privileges |
+| `auth/` | WebKit SSO, form rules, credential and QR dialogs |
+| `bin/ocmac` | Bash CLI and connection supervisor |
+| `libexec/ocmac-helper` | Validated privileged operations, tunnel setup and cleanup |
+| OpenConnect | TLS/DTLS transport |
+
+The helper receives cookies through stdin. It tracks its own routes and DNS
+entries and removes them on disconnect. The sudoers rule allows the helper,
+not an unrestricted shell. A user LaunchAgent runs the supervisor.
+
+## Development
+
+```bash
 ocmac selftest
-sudo ocmac install [--trust] | uninstall
---dry-run                             print privileged commands instead of running them
+ocmac-auth --selftest
+ocmac-auth --learn-selftest
+python3 website/build.py --url https://valeragin.github.io/openconnect-for-mac/
+python3 website/check.py
 ```
 
-## Automation
+Build the GUI with `bash app/make-app.sh`. The installer handles the source build.
+Tests use temporary state, stub helpers or test gateways; they do not establish
+compatibility with every production identity provider. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-There is no Shortcuts action yet, but the CLI is the automation interface —
-use "Run Shell Script" in Shortcuts, or call it from anything else:
+## Compatibility and limits
 
-```bash
-ocmac connect work && ocmac status --short   # key=value lines, easy to parse
-ocmac status --json                          # the same state as JSON (what the app reads)
-ocmac pause; ocmac resume
-ocmac autoconnect manual                     # stop the supervisor from logging in
-```
+- Used on macOS 26, Apple Silicon, with an AnyConnect-compatible gateway and Keycloak.
+- macOS 14.4 is the deployment target. Intel and macOS 14.4–15 have no real-device verification.
+- A clean installation and first sign-in on another Mac have not been verified.
+- ocserv and synthetic SSO tests do not confirm production Okta or Microsoft Entra ID compatibility.
+- IPv6 tunnel addresses can be configured; IPv6 routes are not managed.
+- HostScan and authentication requirements depend on the gateway.
+- System installation and removal can interrupt an active connection.
 
-Coming from Cisco Secure Client? `ocmac import profile.xml` reads the server
-list from an AnyConnect XML profile and creates one `.ocmac` per server
-(addresses only — routes, DNS and credentials stay yours to set).
+## Documentation
 
-## Self-tests
+[Installation](INSTALL.md) · [Troubleshooting](TROUBLESHOOTING.en.md) · [Full troubleshooting, Russian](TROUBLESHOOTING.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [License](LICENSE)
 
-None of them needs a network or privileges: configs are synthetic, state and
-logs go to a temporary directory, the helper is replaced by a stub.
-
-```bash
-ocmac selftest                  # CLI: profile parsing, rejections, cleanup, notifications
-tools/helper-selftest.sh        # privileged helper on --dry-run with stubs
-ocmac-auth --selftest           # TOTP (RFC 6238), XML, fill scope, limits, cookies
-ocmac-auth --learn-selftest     # form recording and autofill on sample pages
-ocmac-app --selftest            # profile read/write parity with the CLI, UI state
-tools/i18n-scan.py --check      # every string a person sees has its English
-```
-
-They run in CI on every push.
-
-## Supported systems
-
-| | Status |
-|---|---|
-| macOS 26, Apple Silicon | used daily by the author; CI builds and runs every self-test |
-| macOS 15, Apple Silicon | weekly CI build and self-tests; no real-device VPN verification |
-| macOS 14.4, Apple Silicon | deployment target; no real-device verification |
-| Intel Macs | expected to work; Homebrew prefix is `/usr/local`, which the helper checks for ownership. Not verified |
-
-Tried OpenConnect for Mac with your gateway? [Tell whether it worked](https://github.com/ValeraGin/openconnect-for-mac/issues/new?template=gateway_report.yml) — one short report
-per gateway and sign-in method fills the compatibility table.
-
-No telemetry, crash reporting or analytics. OpenConnect for Mac talks to your gateway and
-identity provider; configured resource checks contact the resource you choose.
-Logs stay under `~/Library/Logs/ocmac`. Installing and updating downloads code
-from GitHub and Homebrew; the app has no automatic update check.
-
-Network changes first request transport recovery on the existing authenticated
-VPN session. The supervisor gives OpenConnect its normal recovery grace period
-before a fresh login. Use `ocmac autoconnect resume` to keep the last selected
-connection after an outage; `manual` disables fresh automatic sign-ins. An
-explicit Disconnect clears the selected connection and remains disconnected.
-
-## Limitations
-
-- Password groups (`Auth = password`: login, password and an SMS code) need a
-  human for the code: OpenConnect for Mac fills in the password and asks for the SMS code in
-  a small window, so they never reconnect silently.
-- Full IPv4 traffic uses `0.0.0.0/1` + `128.0.0.0/1`. DNS is configured separately
-  with `[DNSPolicy] Mode = all` (gateway DNS for all domains) or `split` (default).
-  Optional `SearchDomain` completes short names. All mode uses all supplied IPv4
-  DNS servers and a dedicated macOS resolver removed on pause/disconnect; physical
-  network service settings are preserved. Explicit `[DNS]` entries remain overrides.
-  This policy requires helper 0.10.0 or newer (`sudo ocmac install`).
-- IPv6 inside the tunnel: the address is set, routes are not.
-- The Homebrew-installed shared libraries of `openconnect` stay in a
-  user-writable prefix; the helper verifies their hashes, which catches
-  accidental changes but not a targeted local attacker. See
-  [SECURITY.md](SECURITY.md).
-
-## License
-
-MIT — see [LICENSE](LICENSE). Author: Valery Ignatkovich
-([@ValeraGin](https://github.com/ValeraGin)).
-
-### Profile workflow API
-
-`ocmac import --json <file> [name]` returns `{"profiles":["actual-id",…]}` on stdout;
-import notices go to stderr. Cisco XML may create several profiles. Applications
-must use these IDs rather than the input filename.
-
-`ocmac csd-status [profile]` returns `required`, `ready` and the system script
-`name` as JSON without installing or executing CSD. Missing or changed system
-copies block connection before sign-in. Run `sudo ocmac install` and check again.
-External wrappers use content-based names; an older basename is accepted only
-when its contents match. `ocmac check-access [profile] [URL]` checks a work resource
-once and returns `{"reachable":true|false|null}` without changing the connection
-or the supervisor’s state. An optional URL is used only for that check.
+Independent project, not affiliated with Cisco or the OpenConnect project.
+“AnyConnect” describes protocol compatibility.
