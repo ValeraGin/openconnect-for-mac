@@ -9,6 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="${base}assets/icon.svg">
 <link rel="stylesheet" href="${base}landing.css?v=20261110-2">
+<link rel="stylesheet" href="${base}command.css?v=20261110-1">
 </head>
 <body>
 <a class="skip" href="#content">$skip</a>
@@ -38,7 +39,7 @@
   <p class="muted">$alternative_intro <a href="https://gitlab.com/openconnect/openconnect-gui">OpenConnect GUI</a>. $alternative_focus</p>
   <section class="install" id="install">
     <h2>$install_title</h2>
-    <div class="code"><pre id="commands">$install_command</pre><button type="button" data-copy="commands" data-done="$copied">$copy</button></div>
+    $install_block
     <p>$install_note</p>
     <p><a class="link" href="guide/#profile">$profile_link →</a></p>
     <p><a class="link" href="guide/">$guide_link →</a></p>
@@ -50,6 +51,6 @@
   <span>$license</span>
   <span>$disclaimer</span>
 </footer>
-<script src="${base}copy.js"></script>
+<script src="${base}copy.js?v=20261110-1"></script>
 </body>
 </html>

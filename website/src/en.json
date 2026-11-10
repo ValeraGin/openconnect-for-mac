@@ -34,5 +34,6 @@
   "profile_link": "I have a configured profile from a teammate",
   "alternative_intro": "OpenConnect already has a graphical client:",
   "alternative_focus": "I build OpenConnect for Mac around my daily workflow: multi-step SSO in WebKit, individual route and DNS-zone switches, pausing without ending the session, and a ready-to-use profile from a teammate.",
-  "tagline": "Work VPN on your Mac"
+  "tagline": "Work VPN on your Mac",
+  "copy_fallback": "Command selected. Press ⌘C or Ctrl+C."
 }

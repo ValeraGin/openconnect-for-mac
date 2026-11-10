@@ -11,6 +11,7 @@ from string import Template
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent
+COMMAND = Template((ROOT / 'src/command.html').read_text())
 parser = argparse.ArgumentParser()
 parser.add_argument('--url', help='Public site root, including repository path, for social and canonical URLs')
 args = parser.parse_args()
@@ -60,9 +61,11 @@ for lang in ('en', 'ru'):
         suffix = prefix + ('guide/' if guide else '')
         base = ('../' if lang == 'en' else '../../') if guide else ('' if lang == 'en' else '../')
         template = Template((ROOT / ('src/guide.html' if guide else 'src/page.html')).read_text())
+        blocks = dict(install_block=COMMAND.substitute(content, command_id='install-command' if guide else 'commands', command_text=commands['install_command']),
+                      profile_block=COMMAND.substitute(content, command_id='profile-command', command_text=commands['profile_command']))
         page = template.substitute(content, lang=lang, base=base, home='./',
-            body=Template((ROOT / f'src/guide-{lang}.html').read_text()).substitute(**commands, **content) if guide else '',
-            **commands,
+            body=Template((ROOT / f'src/guide-{lang}.html').read_text()).substitute(**commands, **content, **blocks) if guide else '',
+            **commands, **blocks,
             en_current='aria-current="page"' if lang == 'en' else '',
             ru_current='aria-current="page"' if lang == 'ru' else '')
         variants = [('en', 'guide/'), ('ru', 'ru/guide/'), ('x-default', 'guide/')] if guide else [('en', ''), ('ru', 'ru/'), ('x-default', '')]

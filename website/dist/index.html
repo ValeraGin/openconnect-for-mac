@@ -9,6 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
 <link rel="stylesheet" href="landing.css?v=20261110-2">
+<link rel="stylesheet" href="command.css?v=20261110-1">
 <script>(function(){var k="ocmac-lang",d=document.documentElement,c=null;
 try{c=localStorage.getItem(k)}catch(e){}
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest(".languages a[lang]");
@@ -51,7 +52,11 @@ if(w==="ru")location.replace("ru/"+location.hash)})()</script>
   <p class="muted">OpenConnect already has a graphical client: <a href="https://gitlab.com/openconnect/openconnect-gui">OpenConnect GUI</a>. I build OpenConnect for Mac around my daily workflow: multi-step SSO in WebKit, individual route and DNS-zone switches, pausing without ending the session, and a ready-to-use profile from a teammate.</p>
   <section class="install" id="install">
     <h2>Install</h2>
-    <div class="code"><pre id="commands">/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/ValeraGin/openconnect-for-mac/main/install.sh)&quot;</pre><button type="button" data-copy="commands" data-done="Copied">Copy</button></div>
+    <div class="shell-command" role="group" aria-label="bash">
+  <div class="command-header"><span>bash</span><button type="button" data-copy="commands" data-done="Copied" data-fallback="Command selected. Press ⌘C or Ctrl+C." aria-label="Copy" title="Copy"><svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg><svg class="done-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button><span class="command-status" role="status" aria-live="polite"></span></div>
+  <pre id="commands"><code>/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/ValeraGin/openconnect-for-mac/main/install.sh)&quot;</code></pre>
+</div>
+
     <p>This command downloads the installer from GitHub. It offers to install missing Apple tools and Homebrew, installs OpenConnect for Mac and opens the app. The system helper needs your Mac administrator password.</p>
     <p><a class="link" href="guide/#profile">I have a configured profile from a teammate →</a></p>
     <p><a class="link" href="guide/">Installation &amp; first connection →</a></p>
@@ -63,6 +68,6 @@ if(w==="ru")location.replace("ru/"+location.hash)})()</script>
   <span>MIT · no telemetry</span>
   <span>Independent project, not an official OpenConnect product. Not affiliated with OpenConnect or Cisco. AnyConnect describes protocol compatibility.</span>
 </footer>
-<script src="copy.js"></script>
+<script src="copy.js?v=20261110-1"></script>
 </body>
 </html>

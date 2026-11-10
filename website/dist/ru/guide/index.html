@@ -6,6 +6,7 @@
 <meta property="og:title" content="Установка и первое подключение — OpenConnect for Mac"><meta property="og:type" content="website">
 <meta property="og:image" content="https://valeragin.github.io/openconnect-for-mac/assets/social-card.jpg"><meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../../assets/mark.svg"><link rel="stylesheet" href="../../style.css?v=20261022-2">
+<link rel="stylesheet" href="../../command.css?v=20261110-1">
 <script>(function(){var k="ocmac-lang",d=document.documentElement,c=null;
 try{c=localStorage.getItem(k)}catch(e){}
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest(".languages a[lang]");
@@ -28,13 +29,21 @@ if(w==="ru")location.replace("../../ru/guide/"+location.hash)})()</script>
 <p>Есть файл от коллеги? Перейдите к <a href="#profile">установке с готовым профилем</a>. Адрес шлюза, сети и DNS уже будут в нём.</p>
 <h2 id="install">Установка одной командой</h2>
 <p>Откройте Терминал и вставьте строку:</p>
-<div class="install-command"><pre id="install-command"><code>/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/ValeraGin/openconnect-for-mac/main/install.sh)&quot;</code></pre><button type="button" data-copy="install-command" data-done="Скопировано">Копировать</button></div>
+<div class="shell-command" role="group" aria-label="bash">
+  <div class="command-header"><span>bash</span><button type="button" data-copy="install-command" data-done="Скопировано" data-fallback="Команда выделена. Нажмите ⌘C или Ctrl+C." aria-label="Копировать" title="Копировать"><svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg><svg class="done-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button><span class="command-status" role="status" aria-live="polite"></span></div>
+  <pre id="install-command"><code>/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/ValeraGin/openconnect-for-mac/main/install.sh)&quot;</code></pre>
+</div>
+
 <p>Команда загружает <a href="https://github.com/ValeraGin/openconnect-for-mac/blob/main/install.sh">установщик с GitHub</a>. Он проверит Git и Swift, предложит недостающие инструменты Apple и Homebrew, соберёт OpenConnect for Mac, настроит системный помощник и автозапуск, затем откроет приложение.</p>
 <p>Если появилось окно установки инструментов Apple, завершите установку в нём: скрипт дождётся продолжения. Для системного помощника понадобится пароль администратора Mac. Запускайте строку от обычного пользователя. Сборка может занять несколько минут.</p>
 <h2 id="profile">Есть профиль от коллеги?</h2>
 <p>После установки достаточно трёх действий: открыть файл, ввести свой логин и подключиться. Переименовывать файл и менять путь в команде не нужно.</p>
 <p>Если OpenConnect for Mac ещё не установлен, откройте Терминал и выполните одну команду:</p>
-<div class="install-command"><pre id="profile-command"><code>/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/ValeraGin/openconnect-for-mac/main/install.sh)&quot; -- --language ru</code></pre><button type="button" data-copy="profile-command" data-done="Скопировано">Копировать</button></div>
+<div class="shell-command" role="group" aria-label="bash">
+  <div class="command-header"><span>bash</span><button type="button" data-copy="profile-command" data-done="Скопировано" data-fallback="Команда выделена. Нажмите ⌘C или Ctrl+C." aria-label="Копировать" title="Копировать"><svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></svg><svg class="done-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button><span class="command-status" role="status" aria-live="polite"></span></div>
+  <pre id="profile-command"><code>/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/ValeraGin/openconnect-for-mac/main/install.sh)&quot; -- --language ru</code></pre>
+</div>
+
 <ol><li><strong>Откройте полученный файл .ocmac двойным щелчком.</strong> Его можно сохранить в любую удобную папку. Либо нажмите «Открыть профиль…» в приложении или в разделе «Профили».</li><li><strong>Введите свой корпоративный логин.</strong> В коротком окне уже будут название и адрес VPN. Сети, DNS и встроенный CSD берутся из файла.</li><li><strong>Нажмите «Подключиться».</strong> Логин сохранится автоматически. Если системную часть нужно подготовить, приложение откроет Терминал: введите пароль администратора Mac и дождитесь завершения. Затем подключение продолжится.</li></ol>
 <p>Открытие профиля не запускает его скрипты и не подключает VPN. Если файл содержит CSD или пользовательские команды, подключайтесь только при доверии к отправителю.</p>
 <h2>Первое подключение</h2>
@@ -67,5 +76,5 @@ brew uninstall openconnect-for-mac</code></pre>
 <p>Первая команда отключает OpenConnect for Mac, снимает его маршруты и DNS, останавливает агенты, удаляет помощник и правило sudoers. Вторая удаляет пакет Homebrew.</p>
 <p>Профили, локальные журналы и состояние, данные входа WebKit и записи Связки ключей сохраняются. Это не полное удаление личных данных. Перед очисткой остатков прочитайте <a href="https://github.com/ValeraGin/openconnect-for-mac/blob/main/INSTALL.md#8-удаление">полную инструкцию удаления</a>. Записи KeePassXC управляются отдельно.</p>
 </main>
-<script src="../../copy.js"></script>
+<script src="../../copy.js?v=20261110-1"></script>
 </body></html>

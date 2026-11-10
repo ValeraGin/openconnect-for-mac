@@ -1,0 +1,12 @@
+.shell-command{margin:20px 0;border:1px solid #39433d;border-radius:6px;background:#202623;color:#e8ede7;min-width:0;max-width:100%;overflow:hidden}
+.command-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:5px 10px 5px 14px;border-bottom:1px solid #39433d;color:#aeb9af;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.command-header button{display:grid;place-items:center;position:relative;width:30px;height:28px;padding:0;border:1px solid transparent;border-radius:4px;background:transparent;color:#cbd5cb;cursor:pointer}
+.command-header button:hover{background:#323c35;border-color:#4b584e;color:#fff}
+.command-header button:focus-visible{outline:2px solid #9bbbda;outline-offset:2px}
+.command-header button[data-state="copied"]{color:#c3f36b}
+.command-header button .done-icon{display:none}
+.command-header button[data-state="copied"] .copy-icon{display:none}
+.command-header button[data-state="copied"] .done-icon{display:block}
+.shell-command pre,.guide-page .guide .shell-command pre{margin:0;padding:14px;background:transparent;border-radius:0;font:12.5px/1.75 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:inherit;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;overflow:visible}
+.shell-command pre code,.guide-page .guide .shell-command pre code{font:inherit;color:inherit;background:transparent;padding:0;white-space:inherit;overflow-wrap:inherit;word-break:inherit}
+.command-status{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}

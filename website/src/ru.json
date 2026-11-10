@@ -34,5 +34,6 @@
   "profile_link": "У меня есть готовый профиль от коллеги",
   "alternative_intro": "У OpenConnect уже есть графический клиент —",
   "alternative_focus": "OpenConnect for Mac я делаю под свой повседневный сценарий: многошаговый SSO-вход в WebKit, переключение отдельных сетей и DNS-зон, пауза без завершения сессии и готовый профиль от коллеги.",
-  "tagline": "Рабочий VPN на Mac"
+  "tagline": "Рабочий VPN на Mac",
+  "copy_fallback": "Команда выделена. Нажмите ⌘C или Ctrl+C."
 }
