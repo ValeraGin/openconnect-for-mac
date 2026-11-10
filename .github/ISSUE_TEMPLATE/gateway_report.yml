@@ -16,13 +16,25 @@ body:
         - Works — connected and used work resources
         - Partly — connected, but something is off (describe below)
         - Does not work
+        - Could not finish installation or open the app
     validations: {required: true}
   - type: input
     id: version
     attributes:
       label: OpenConnect for Mac version
-      description: Output of `ocmac version`
+      description: Output of `ocmac version`. If installation failed, give the requested version or source commit, or write "not installed".
     validations: {required: true}
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation
+      description: A fresh Mac or macOS account is especially useful for checking first-time setup.
+      options:
+        - Installer — first installation
+        - Homebrew — first installation
+        - Upgrade of an existing installation
+        - From source — include the commit in Notes
+        - Other
   - type: input
     id: macos
     attributes:

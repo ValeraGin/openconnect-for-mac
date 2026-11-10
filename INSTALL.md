@@ -467,8 +467,8 @@ sudo ./bin/ocmac install
 
 ## 8. Удаление
 
-**Порядок важен: сначала `sudo ocmac uninstall`, потом `brew uninstall
-ocmac`.** `uninstall` — команда самого `ocmac`; если сначала удалить
+**Порядок важен: сначала `sudo ocmac uninstall`, потом
+`brew uninstall openconnect-for-mac`.** `uninstall` — команда самого `ocmac`; если сначала удалить
 формулу, убирать системную часть будет нечем, и на машине останутся
 root-хелпер с беспарольным правилом в `/etc/sudoers.d/ocmac`, копия
 `openconnect` в root-каталоге и LaunchAgent супервизора, который launchd

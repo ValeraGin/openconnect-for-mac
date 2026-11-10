@@ -186,6 +186,10 @@ external browser, iframe/shadow DOM traversal, HOTP, bottles or a cask
 
 ## Reporting a problem
 
+Trying the app on another Mac or gateway is also a contribution. Follow the
+[first-connection checklist](TESTING.md) and report the result, including where
+you stopped if installation or sign-in failed. Reports in Russian are welcome.
+
 Use the issue templates. `ocmac report` produces a single file with versions,
 diagnostics and log tails with hosts, addresses and logins masked — attach it,
 but read it first: masking does not know your internal names.
