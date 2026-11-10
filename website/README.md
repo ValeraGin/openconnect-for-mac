@@ -10,10 +10,17 @@ scripts are language detection and the copy button.
 ```sh
 python3 website/build.py --url https://valeragin.github.io/openconnect-for-mac/
 python3 website/check.py
-python3 -m http.server 8767 --bind 127.0.0.1 --directory website
+python3 -m http.server 8767 --bind 127.0.0.1 --directory website/dist
 ```
 
-Preview `/dist/` and `/dist/ru/`. The main page template is `src/page.html`;
+Open [English preview](http://127.0.0.1:8767/) or
+[Russian preview](http://127.0.0.1:8767/ru/) while the server is running.
+Use HTTP for preview: opening `index.html` as a `file://` URL does not resolve
+directory links to index pages, so language switches and guide links can open
+directory listings instead. Check those transitions in the browser, not only
+the first page's layout. The server serves only `website/dist` on loopback.
+
+The main page template is `src/page.html`;
 translations are in `src/en.json` and `src/ru.json`. Installation guides keep their
 own templates and their existing URLs. `dist/landing.css` styles the landing,
 `dist/style.css` the installation guides. The build copies the README animation
