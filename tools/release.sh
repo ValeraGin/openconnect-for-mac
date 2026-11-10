@@ -123,6 +123,7 @@ python3 tools/app-update-selftest.py
 python3 tools/installer-selftest.py
 python3 tools/embedded-csd-selftest.py
 python3 tools/profile-workflow-selftest.py
+python3 tools/screenshots-test.py
 echo "release: build auth"
 swift build -c release --package-path auth >/dev/null
 echo "release: auth self-test"

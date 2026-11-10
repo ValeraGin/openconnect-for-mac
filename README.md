@@ -191,6 +191,11 @@ compatibility with every production identity provider. See [CONTRIBUTING.md](CON
 
 ## Documentation
 
+[Connection](assets/connection.png) · [Setup](assets/setup.png) · [Settings](assets/profile.png) · [Sign-in settings](assets/login.png) · [Network](assets/network.png)
+
+Screenshots use demonstration profiles and real windows captured in the background.
+Native controls are inactive. [Capture provenance](website/ASSETS.md).
+
 [Installation](INSTALL.md) · [Troubleshooting](TROUBLESHOOTING.en.md) · [Full troubleshooting, Russian](TROUBLESHOOTING.md) · [Changelog](CHANGELOG.md) · [Security](SECURITY.md) · [License](LICENSE)
 
 Independent project, not affiliated with Cisco or the OpenConnect project.

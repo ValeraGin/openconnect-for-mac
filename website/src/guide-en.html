@@ -11,13 +11,13 @@
 <p>After installation, just open the file, enter your username and connect. You do not need to rename the file or edit a path in a command.</p>
 <p>If OpenConnect for Mac is not installed yet, open Terminal and run one command:</p>
 <div class="install-command"><pre id="profile-command"><code>$profile_command</code></pre><button type="button" data-copy="profile-command" data-done="$copied">$copy</button></div>
-<ol><li><strong>Double-click the .ocmac file you received.</strong> Save it in any convenient folder. You can also choose Open profile… in the app or in Profiles settings.</li><li><strong>Enter your own work username.</strong> The short window already shows your VPN name and address. Networks, DNS and embedded CSD come from the file.</li><li><strong>Choose Connect.</strong> Your username is saved automatically. If system setup is needed, the app opens Terminal: enter your Mac administrator password and wait for setup to finish. Connection then continues.</li></ol>
+<ol><li><strong>Double-click the .ocmac file you received.</strong> Save it in any convenient folder. You can also choose Open profile… in the app.</li><li><strong>Enter your own work username.</strong> The short window already shows your VPN name and address. Networks, DNS and embedded CSD come from the file.</li><li><strong>Choose Connect.</strong> Your username is saved automatically. If system setup is needed, the app opens Terminal: enter your Mac administrator password and wait for setup to finish. Connection then continues.</li></ol>
 <p>Opening a profile does not run its scripts or connect the VPN. If it contains CSD or custom commands, connect only if you trust the sender.</p>
 <h2>First connection</h2>
 <p>Complete your organization’s sign-in with your password and second factor. Once connected, check a work resource and an ordinary public website. Networks and pause are available from the OpenConnect for Mac menu bar icon.</p>
 <p>If the installer has already imported a profile without a username, the username window opens automatically. Choose All settings… to change other options. In the editor, Save profile saves the configuration; the button next to the password saves only the password.</p>
-<p>For Cisco XML with several servers, choose the profile you need in the new window. Manual configuration and work resource checks remain available in Settings → General → Setup wizard and access check….</p>
-<p>Choose English, Russian or System default in Settings → General → Interface language.</p>
+<p>For Cisco XML with several servers, choose the profile you need in the new window. Create a new profile with Add a new profile… in the app menu. To reopen the assistant, choose Settings → App → Run setup assistant again….</p>
+<p>Choose English, Russian or System default in Settings → App → Interface language.</p>
 <p class="notice">The author has verified macOS 26 on Apple Silicon. A clean installation and first sign-in on another Mac have not yet been verified. Sign-in and device checks depend on your organization.</p>
 <p><a href="https://github.com/ValeraGin/openconnect-for-mac/issues/new?template=gateway_report.yml">Tell us how your gateway worked</a>: gateway type, sign-in method and result are enough. Do not include corporate addresses or sign-in details.</p>
 <h2>If the connection fails</h2>
@@ -33,7 +33,7 @@ ocmac doctor</code></pre>
 <p>One .ocmac file brings together the gateway, networks, DNS zones and SSO form rules. New teammates can start with settings you have already checked.</p>
 <pre><code>ocmac export main team.ocmac</code></pre>
 <p>Here, main is the name of your configured profile. Before sharing, open the file: replace your personal User value, review KeePassXC and CSD wrapper paths, and check any custom commands. Export does not retrieve passwords or TOTP secrets from your credential store; you must review the contents of your own commands and rules. Share work settings within your team.</p>
-<p>If CSD is required, open the profile editor’s advanced settings and choose Embed CSD script… before exporting. Export preserves the script inside the file.</p>
+<p>If CSD is required, open Advanced → Device check · CSD in profile settings before exporting. Select Script text, paste the approved script or use Load from file…, then save the profile. Export preserves the script inside the file.</p>
 <p>Send your teammate <code>team.ocmac</code> and the <a href="#profile">link to installation with a configured profile</a>. After installation, they double-click the file, enter their own username and choose Connect.</p>
 
 <h2 id="remove">Remove the app and system helper</h2>

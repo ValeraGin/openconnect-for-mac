@@ -1,0 +1,227 @@
+{
+  "appVersion": "0.27.0",
+  "binarySHA256": "077f2a1fafe917f04467ed41590e16803f5b894d91cd148415759383362e2192",
+  "plistSHA256": "efe4162aeb4dad9e02bc9ea68e4846cb8bd5cb956d14ca22cb2b9895e24193b9",
+  "exportedAt": "2026-11-10T19:15:41.259894+00:00",
+  "capture": "screencapture-passive-window",
+  "appearanceMode": "inactive",
+  "syntheticData": true,
+  "images": [
+    {
+      "path": "assets/profile.png",
+      "sha256": "2da8f331a071fba9241eee640b7d226f452535b441130aa227d1eca24eb5b283",
+      "language": "en",
+      "screen": "settings",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/login.png",
+      "sha256": "cb06ccb0e0967179814a2a8adcce06d900ac9d1a5123c6f7b133243dfe5f5a19",
+      "language": "en",
+      "screen": "settings",
+      "page": "login",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/network.png",
+      "sha256": "0652fca1d427fbac1339021cfc42e67bb3901c037fbd39e07be1af1a891b7cd2",
+      "language": "en",
+      "screen": "settings",
+      "page": "network",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/advanced.png",
+      "sha256": "8244ef87fce734b13c9d65c0f85924ab6a122560055c422e4b2cbe880f2d2cbf",
+      "language": "en",
+      "screen": "settings",
+      "page": "advanced",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/notifications.png",
+      "sha256": "a82961e7c10c9875309dbfceec2fe49bad27cd5811a364fee3b65af8380eb306",
+      "language": "en",
+      "screen": "settings",
+      "page": "notifications",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/about.png",
+      "sha256": "3388b2fb011e6abb52da5c200b22a9547b88433315f9b88fcce9c4e5c149646b",
+      "language": "en",
+      "screen": "settings",
+      "page": "about",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/setup.png",
+      "sha256": "47a110203f5511dc318936f6fc1ac5dd648666caec47a2932dfdbb90803cb1d7",
+      "language": "en",
+      "screen": "setup",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/setup-network.png",
+      "sha256": "56b71f60ecd74c6498b37804fd7bcecc874e2f1b39ab1562ed952632ec126e55",
+      "language": "en",
+      "screen": "setup",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/connection.png",
+      "sha256": "2afa49be6595ef8eca14433d8066de0c00ec0357e7399c978319bc998ed38183",
+      "language": "en",
+      "screen": "connection",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/connection-idle.png",
+      "sha256": "b575c04b8ee16e28e8fd055e9949246d643ac3f8899f3cac09f8d8851db01bb2",
+      "language": "en",
+      "screen": "connection",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/connection-connecting.png",
+      "sha256": "b739090f547a62e829287210f8c14957856a2fe306bcec7167308bf8890e4192",
+      "language": "en",
+      "screen": "connection",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/connection-paused.png",
+      "sha256": "6e8fcb5417a97b6235b80b62c17016f9866a9a71ccbfa14b518c3a5cb9846957",
+      "language": "en",
+      "screen": "connection",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/ru/profile.png",
+      "sha256": "5a17e2b7050fdddfd0c07d1a3a2bedeaa90d915a4da311f8bd045c009b48055d",
+      "language": "ru",
+      "screen": "settings",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/ru/login.png",
+      "sha256": "80f9f6956a97a0d1229162bc1780a5cd8bf03e3b1a9e179d241fd94683696733",
+      "language": "ru",
+      "screen": "settings",
+      "page": "login",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/ru/network.png",
+      "sha256": "fd6b3a2384a0dce1eb2dae87e70ff8607800a6c72ebbe39edb2af67fc09bdf96",
+      "language": "ru",
+      "screen": "settings",
+      "page": "network",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/ru/advanced.png",
+      "sha256": "eac80432885f6c37e544881451c2fb102a5b981a828ceb122dc8cf0a16a2f939",
+      "language": "ru",
+      "screen": "settings",
+      "page": "advanced",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/ru/notifications.png",
+      "sha256": "e9ce5d839e6a6d922a7f5320763453629994854d8fb0e4433bcbaf9a2ccd3af1",
+      "language": "ru",
+      "screen": "settings",
+      "page": "notifications",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/ru/about.png",
+      "sha256": "fbb2f667af88fdcd5885b410d55668684b409a2e5e9e7b3e09ec27400b968e75",
+      "language": "ru",
+      "screen": "settings",
+      "page": "about",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/ru/setup.png",
+      "sha256": "3592ad8060cb6070ea12e44fb46e949abca8485ffb6dcec81a45d23e4153f0d3",
+      "language": "ru",
+      "screen": "setup",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/ru/setup-network.png",
+      "sha256": "445e35acf6c5f79089af94ef72354683ce929703166d3ef6be432cc9800e17ce",
+      "language": "ru",
+      "screen": "setup",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/ru/connection.png",
+      "sha256": "0205daf57e9350ea9d0dc0a0191921f58782e26943c1717569d713b9d54e0963",
+      "language": "ru",
+      "screen": "connection",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/ru/connection-idle.png",
+      "sha256": "e80ad60f5cc72c4e844aba43d2b030372e1926a640f9c2ea44c5df8d79d4ce71",
+      "language": "ru",
+      "screen": "connection",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/ru/connection-connecting.png",
+      "sha256": "892a271c9fa83208a8ab0f4a8520a871f875c57dd61570d8fb732004a2846674",
+      "language": "ru",
+      "screen": "connection",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    },
+    {
+      "path": "assets/ru/connection-paused.png",
+      "sha256": "104c6af8d551590ea2052129df238f92a66b359d2758c08142b6c139670039f7",
+      "language": "ru",
+      "screen": "connection",
+      "page": "connection",
+      "focusPreserved": true,
+      "builtInDisplay": true
+    }
+  ]
+}

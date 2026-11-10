@@ -1,7 +1,7 @@
 # OpenConnect for Mac website
 
 English and Russian landing pages and installation guides, published on GitHub Pages.
-The landing is one short page: what OpenConnect for Mac is, the menu animation, five advantages,
+The landing is one short page: what OpenConnect for Mac is, the connection animation, five advantages,
 the install commands and links. No runtime dependencies or tracking; the only
 scripts are language detection and the copy button.
 
@@ -40,13 +40,22 @@ a portable local preview and removes sitemap/robots files.
 
 ## Screenshots and assets
 
-`tools/screenshots.sh` refreshes README screenshots in `assets/` and `assets/ru/`.
-`tools/demo-gif.sh` rebuilds the README animation `assets/demo.gif` and `assets/ru/demo.gif`,
-`tools/social-card.sh` the link cards in `dist/assets/`.
-The menu is a real NSMenu and is captured from the screen (`tools/menu-capture.sh`,
-the `--stage --demo-menu` app on demonstration profiles): while it runs, a second OpenConnect for Mac
-icon and the open demo menu appear on screen. Windows are rendered off screen.
-Use only demonstration profiles for public images.
+`tools/screenshots.sh` captures 24 real windows in English and Russian on the
+built-in display with synthetic profiles, without activating the app or taking
+keyboard input. Both languages use light appearance. Controls are inactive;
+these are not active-window color references. Export requires matching app/CLI
+versions, build hashes and focus/display proof for every image.
+
+`assets/captures.json` records the version, build and image hashes. Use
+`python3 tools/screenshots.py --verify-only` to check the exported images without
+opening windows. `--resume` preserves matching captures after an interrupted run.
+
+`tools/demo-gif.sh` rebuilds `assets/demo.gif` and `assets/ru/demo.gif` from the
+verified connection-window stills. It illustrates states, not a live connection.
+`tools/social-card.sh` uses the verified connected-window screenshot for the link
+cards in `dist/assets/`. Neither script opens a menu or window.
+Run both after screenshots, then rebuild the website. Legacy `tools/menu-capture.sh`
+opens a tracking menu and is not part of this background capture workflow.
 
 SVG route, DNS, comparison and open-source illustrations are localized for both
 languages. `mark.svg`/`icon.svg` match the native app switch. The social card uses

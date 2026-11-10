@@ -196,6 +196,11 @@ python3 website/check.py
 
 ## Документация
 
+[Подключение](assets/ru/connection.png) · [Мастер](assets/ru/setup.png) · [Настройки](assets/ru/profile.png) · [Вход](assets/ru/login.png) · [Сеть](assets/ru/network.png)
+
+Настоящие окна сняты в фоне на демонстрационных профилях. Системные контролы
+неактивны. [Происхождение кадров](website/ASSETS.md).
+
 [Установка](INSTALL.md) · [Диагностика](TROUBLESHOOTING.md) · [История изменений](CHANGELOG.md) · [Безопасность](SECURITY.md) · [Лицензия](LICENSE)
 
 Независимый проект. Не связан с Cisco и проектом OpenConnect.

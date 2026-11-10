@@ -126,7 +126,8 @@ enum PassiveWindowCapture {
             "foregroundAfter": NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0,
             "windowID": panel.windowNumber, "pid": getpid(), "screen": screen,
             "contentWidth": host.bounds.width, "contentHeight": host.bounds.height,
-            "appearance": panel.effectiveAppearance.name.rawValue, "syntheticData": true
+            "appearance": panel.effectiveAppearance.name.rawValue, "syntheticData": true,
+            "appVersion": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
         ]
         do {
             try JSONSerialization.data(withJSONObject: metadata, options: [.prettyPrinted, .sortedKeys])

@@ -1,7 +1,7 @@
 import AppKit
-// Карточка для ссылок 1200×630: заголовок лендинга и настоящее меню.
+// Карточка для ссылок 1200×630: заголовок лендинга и снимок окна соединения.
 //   swift tools/make-social-card.swift <en|ru> <menu.png> <out-без-расширения>
-// Обычно её зовёт tools/social-card.sh: он же снимает меню из витрины.
+// Обычно её зовёт tools/social-card.sh: он проверяет версию исходного кадра.
 let args = CommandLine.arguments
 guard args.count == 4 else { print("usage: make-social-card.swift <en|ru> <menu.png> <out>"); exit(2) }
 let (lang, menuPath, out) = (args[1], args[2], args[3])
@@ -34,7 +34,7 @@ label(second, 66, 252, headline, ink)
 color(0xC3F36B).setFill()
 NSBezierPath(roundedRect: NSRect(x: 70, y: 214, width: 120, height: 12), xRadius: 6, yRadius: 6).fill()
 label(footer, 70, 70, .systemFont(ofSize: 22, weight: .regular), muted)
-// Меню справа, прижато к верхнему краю, как в строке меню: по высоте карточки с
+// Окно справа: по высоте карточки с
 // полями, но не шире правой колонки — заголовок слева не перекрывается.
 let scale = min(520 / menu.size.height, 400 / menu.size.width)
 let height = menu.size.height * scale, width = menu.size.width * scale

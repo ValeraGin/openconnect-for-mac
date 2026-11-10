@@ -5,6 +5,7 @@ import html
 import json
 import re
 import shutil
+import struct
 from pathlib import Path
 from string import Template
 from urllib.parse import urlparse
@@ -41,7 +42,7 @@ for(var i=0;i<l.length;i++){var p=String(l[i]).toLowerCase().split("-")[0];if(p=
 if(w==="ru")location.replace("%s"+location.hash)})()</script>
 '''
 
-# Анимация меню — та же, что в README: tools/demo-gif.sh пишет её в assets/ репозитория.
+# Анимация окна соединения: tools/demo-gif.sh собирает её из проверенных кадров.
 for lang, source in (('en', 'assets/demo.gif'), ('ru', 'assets/ru/demo.gif')):
     shutil.copyfile(ROOT.parent / source, ROOT / f'dist/assets/demo-{lang}.gif')
     shutil.copyfile(ROOT.parent / Path(source).with_name('profile.png'), ROOT / f'dist/assets/profile-{lang}.png')
@@ -49,6 +50,8 @@ for lang, source in (('en', 'assets/demo.gif'), ('ru', 'assets/ru/demo.gif')):
 for lang in ('en', 'ru'):
     content = json.loads((ROOT / f'src/{lang}.json').read_text())
     content = {k: html.escape(v, quote=True).replace('&lt;br&gt;', '<br>').replace('&lt;span&gt;', '<span>').replace('&lt;/span&gt;', '</span>') for k, v in content.items()}
+    demo_width, demo_height = struct.unpack('<HH', (ROOT / f'dist/assets/demo-{lang}.gif').read_bytes()[6:10])
+    content.update(demo_width=demo_width, demo_height=demo_height)
     prefix = '' if lang == 'en' else 'ru/'
     install_command = '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ValeraGin/openconnect-for-mac/main/install.sh)"'
     commands = dict(install_command=html.escape(install_command),

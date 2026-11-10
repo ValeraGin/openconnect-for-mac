@@ -31,7 +31,7 @@ def cases():
                            ['--review-screen', 'setup', '--step', str(step), '--setup-state', state]))
         result.append((f'{lang}-setup-connected', lang, theme, 'connection', '', 'normal',
                        ['--review-screen', 'setup', '--step', '2', '--setup-state', 'ready', 'connected']))
-        for state in ['down', 'connected', 'needsLogin']:
+        for state in ['down', 'starting', 'connected', 'paused', 'needsLogin']:
             result.append((f'{lang}-connection-window-{state}', lang, theme, 'connection', '', 'normal',
                            ['--review-screen', 'connection', '--state', state]))
         for variant in ['empty', 'many', 'long', 'invalid']:
@@ -79,15 +79,21 @@ def main():
     parser.add_argument('--only', action='append')
     parser.add_argument('--resume', action='store_true')
     parser.add_argument('--gallery-only', action='store_true')
+    parser.add_argument('--appearance', choices=['light', 'dark'], help='Use one appearance for all selected captures')
     args = parser.parse_args()
     OUT = args.output.resolve()
     OUT.mkdir(parents=True, exist_ok=True)
     digest = hashlib.sha256((APP / 'Contents/MacOS/ocmac-app').read_bytes()).hexdigest()
+    plist_digest = hashlib.sha256((APP / 'Contents/Info.plist').read_bytes()).hexdigest()
     require_display = runpy.run_path(str(ROOT / 'design-lab/review.py'))['require_active_display']
     for name, lang, theme, page, detail, variant, extra in cases():
         if args.gallery_only or (args.only and name not in args.only): continue
+        theme = args.appearance or theme
         png = OUT / f'{name}.png'; meta = png.with_suffix('.json')
-        if args.resume and png.exists() and meta.exists() and json.loads(meta.read_text()).get('binarySHA256') == digest: continue
+        if args.resume and png.exists() and meta.exists():
+            previous = json.loads(meta.read_text())
+            if (previous.get('binarySHA256') == digest and previous.get('plistSHA256') == plist_digest
+                    and previous.get('requestedAppearance') == theme): continue
         require_display()
         data = OUT / 'fixtures' / name; fixture(data, variant)
         ready = png.with_suffix('.ready.json'); done = png.with_suffix('.capture-done')
@@ -96,7 +102,8 @@ def main():
         screen = 'settings'
         if '--review-screen' in extra:
             i = extra.index('--review-screen'); screen = extra[i + 1]; del extra[i:i + 2]
-        command = ['open', '-g', '-n', '-W']
+        command = ['open', '-g', '-n', '-W', '--stdout', str(png.with_suffix('.app.stdout')),
+                   '--stderr', str(png.with_suffix('.app.stderr'))]
         for key, directory in [('OCMAC_CONFIG_DIR', 'config'), ('OCMAC_STATE_DIR', 'root'), ('OCMAC_USER_STATE', 'state'), ('OCMAC_LOG_DIR', 'logs')]:
             command += ['--env', f'{key}={data / directory}']
         command += [str(APP), '--args', '--stage', '--capture-passive', '--screenshot', screen, '--settings-page', page,
@@ -115,7 +122,8 @@ def main():
                 if process.wait(timeout=20) != 0 or not meta.exists(): raise RuntimeError(f'{name}: capture verification failed')
                 report = json.loads(meta.read_text())
                 assert report['focusPreserved'] and report['builtInDisplay'] and not report['active']
-                report.update(binarySHA256=digest, page=page, detail=detail, variant=variant, language=lang)
+                report.update(binarySHA256=digest, plistSHA256=plist_digest, requestedAppearance=theme,
+                              page=page, detail=detail, variant=variant, language=lang)
                 meta.write_text(json.dumps(report, indent=2))
                 print(name, 'OK', flush=True)
             finally:
@@ -126,7 +134,9 @@ def main():
     cards = []; accepted = 0
     for name, *_ in cases():
         png = OUT / f'{name}.png'; meta = png.with_suffix('.json')
-        valid = png.exists() and meta.exists() and json.loads(meta.read_text()).get('binarySHA256') == digest
+        report = json.loads(meta.read_text()) if meta.exists() else {}
+        valid = (png.exists() and report.get('binarySHA256') == digest and report.get('plistSHA256') == plist_digest
+                 and (not args.appearance or report.get('requestedAppearance') == args.appearance))
         accepted += int(valid)
         cards.append(f'<article id="{name}"><h2>{html.escape(name)}</h2>' + (f'<a href="{name}.png"><img loading="lazy" src="{name}.png"></a>' if valid else '<p>Не снято для текущей сборки</p>') + '</article>')
     (OUT / 'index.html').write_text('''<!doctype html><meta charset="utf-8"><title>Новый интерфейс — ревью</title>
