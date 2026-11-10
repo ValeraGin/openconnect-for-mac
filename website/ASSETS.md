@@ -51,6 +51,7 @@ a VPN connection. Background: #EEF0EA. The build copies them to
 window image using `tools/make-social-card.swift`. PNG files are the masters;
 JPEG files are used by Open Graph. `social-card.*` is the English copy. Upload
 of the GitHub social preview is a separate publication action.
+The product name is the primary text at 44 px; the tagline is secondary at 30 px.
 
 Both generators verify capture hashes and version before rendering and never
 open menus or windows. The previous menu screenshots are removed; the native

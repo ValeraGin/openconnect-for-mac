@@ -27,12 +27,10 @@ func label(_ s: String, _ x: CGFloat, _ y: CGFloat, _ font: NSFont, _ c: NSColor
 color(0xEEF0EA).setFill(); NSRect(origin: .zero, size: size).fill()
 let ink = color(0x17201D), muted = color(0x56605A)
 NSImage(contentsOfFile: "app/Resources/AppIcon.icns")!.draw(in: NSRect(x: 62, y: 500, width: 76, height: 76))
-label("OpenConnect for Mac", 150, 517, .systemFont(ofSize: 30, weight: .semibold), ink)
-let headline = NSFont.systemFont(ofSize: 62, weight: .bold)
-label(first, 66, 330, headline, ink)
-label(second, 66, 252, headline, ink)
+label("OpenConnect for Mac", 150, 511, .systemFont(ofSize: 44, weight: .semibold), ink)
+label(first + " " + second, 70, 345, .systemFont(ofSize: 30, weight: .medium), muted)
 color(0xC3F36B).setFill()
-NSBezierPath(roundedRect: NSRect(x: 70, y: 214, width: 120, height: 12), xRadius: 6, yRadius: 6).fill()
+NSBezierPath(roundedRect: NSRect(x: 70, y: 309, width: 80, height: 6), xRadius: 3, yRadius: 3).fill()
 label(footer, 70, 70, .systemFont(ofSize: 22, weight: .regular), muted)
 // Окно справа: по высоте карточки с
 // полями, но не шире правой колонки — заголовок слева не перекрывается.

@@ -7,7 +7,7 @@
   "copy": "Copy",
   "title": "OpenConnect for Mac — work VPN on your Mac",
   "description": "Work VPN on your Mac: SSO sign-in, selected networks and corporate DNS, and recovery after sleep. An open-source client built on OpenConnect.",
-  "h1": "Work VPN on your Mac",
+  "h1": "OpenConnect for Mac",
   "lead": "SSO, the networks you need, and recovery after sleep. A native macOS menu, open source, built on OpenConnect.",
   "install_cta": "Install",
   "source_cta": "Source on GitHub",
@@ -39,5 +39,6 @@
   "feedback_link": "Tried your gateway? Tell us how it went",
   "feedback_note": "A short report helps clarify compatibility. No company name, gateway address or sign-in details needed.",
   "alternative_intro": "OpenConnect already has a graphical client:",
-  "alternative_focus": "I build OpenConnect for Mac around my daily workflow: multi-step SSO in WebKit, individual route and DNS-zone switches, pausing without ending the session, and a ready-to-use profile from a teammate."
+  "alternative_focus": "I build OpenConnect for Mac around my daily workflow: multi-step SSO in WebKit, individual route and DNS-zone switches, pausing without ending the session, and a ready-to-use profile from a teammate.",
+  "tagline": "Work VPN on your Mac"
 }
