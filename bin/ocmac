@@ -3329,14 +3329,18 @@ cmd_supervise() {
             else
                 log "событие: смена интерфейса $last_iface → $iface"
                 probe_bad_since=0; next_try=0; backoff=5
-                # Восстановиться по старому локальному адресу openconnect не
-                # сможет («Can't assign requested address» в логе), поэтому
-                # ждать смысла нет: сразу закрываем сессию и заходим заново.
-                # Прокси-режим — тот же openconnect, та же беда.
                 if [ "$st" = connected ] && [ -n "$desired" ]; then
-                    log "смена интерфейса — восстановление по старому адресу невозможно, переподключаюсь"
-                    session_stop >>"$SUP_LOG" 2>&1 || true
-                    st=down; next_try=0
+                    if [ "$(session_kind)" = proxy ]; then
+                        # The SOCKS subprocess has its own recovery lifecycle.
+                        session_stop >>"$SUP_LOG" 2>&1 || true
+                        st=down; next_try=0
+                    else
+                        # SIGUSR2 reconnects transport after a LAN IP change,
+                        # retaining the authenticated session. The normal probe
+                        # and grace period below handle failure before a new login.
+                        log "смена интерфейса — восстанавливаю текущую VPN-сессию без нового входа"
+                        priv reconnect-now >>"$SUP_LOG" 2>&1 || true
+                    fi
                 fi
             fi
             no_net=0; last_iface="$iface"

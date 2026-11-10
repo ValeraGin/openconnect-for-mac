@@ -372,6 +372,12 @@ identity provider; configured resource checks contact the resource you choose.
 Logs stay under `~/Library/Logs/ocmac`. Installing and updating downloads code
 from GitHub and Homebrew; the app has no automatic update check.
 
+Network changes first request transport recovery on the existing authenticated
+VPN session. The supervisor gives OpenConnect its normal recovery grace period
+before a fresh login. Use `ocmac autoconnect resume` to keep the last selected
+connection after an outage; `manual` disables fresh automatic sign-ins. An
+explicit Disconnect clears the selected connection and remains disconnected.
+
 ## Limitations
 
 - Password groups (`Auth = password`: login, password and an SMS code) need a
