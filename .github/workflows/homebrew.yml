@@ -78,3 +78,22 @@ jobs:
           sudo -n /usr/local/libexec/ocmac-helper version
           OCMAC_LANG=ru ocmac doctor | tee "$RUNNER_TEMP/doctor.txt"
           grep -F 'Проблем не найдено.' "$RUNNER_TEMP/doctor.txt"
+
+      - uses: actions/checkout@v5
+        if: inputs.previous_tap_commit == ''
+        with:
+          persist-credentials: false
+
+      - name: Start a private test gateway on loopback
+        if: inputs.previous_tap_commit == ''
+        run: |
+          brew install colima docker qemu
+          # A different guest architecture selects software emulation on the Arm runner.
+          colima start --vm-type qemu --arch x86_64 --cpu 2 --memory 2 --disk 10
+          docker build -t ocmac-release-lab tools/server-lab
+
+      - name: First sign-in, private resource, pause, resume, disconnect and second sign-in
+        if: inputs.previous_tap_commit == ''
+        env:
+          RUNNER_ENVIRONMENT: ${{ runner.environment }}
+        run: python3 tools/server-lab/first-connection.py
