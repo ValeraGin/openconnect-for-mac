@@ -1,0 +1,80 @@
+name: Homebrew release check
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Expected published version
+        required: true
+        default: '0.27.0'
+      previous_tap_commit:
+        description: Earlier tap commit for an upgrade, or leave empty for a first installation
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      VERSION: ${{ inputs.version }}
+      PREVIOUS: ${{ inputs.previous_tap_commit }}
+      FORMULA: ValeraGin/openconnect-for-mac/openconnect-for-mac
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_NO_ANALYTICS: '1'
+    steps:
+      - name: Check the starting system
+        run: |
+          sw_vers
+          uname -m
+          brew --version
+          test -z "$(command -v ocmac)"
+          test ! -e /usr/local/libexec/ocmac-helper
+          test ! -e "$HOME/.config/ocmac"
+          test ! -e "$HOME/Applications/OpenConnect for Mac.app"
+
+      - name: Upgrade the previous installation
+        if: inputs.previous_tap_commit != ''
+        run: |
+          [[ "$PREVIOUS" =~ ^[0-9a-f]{40}$ ]]
+          brew tap ValeraGin/openconnect-for-mac
+          if brew help trust >/dev/null 2>&1; then brew trust ValeraGin/openconnect-for-mac; fi
+          tap=$(brew --repository ValeraGin/openconnect-for-mac)
+          current=$(git -C "$tap" rev-parse HEAD)
+          git -C "$tap" fetch --depth=1 origin "$PREVIOUS"
+          git -C "$tap" switch --detach "$PREVIOUS"
+          brew install "$FORMULA"
+          old=$(ocmac version)
+          echo "Before upgrade: $old"
+          test "$old" != "ocmac $VERSION"
+          ocmac app upgrade
+          ocmac prepare
+          sudo -- "$(command -v ocmac)" install
+          git -C "$tap" switch --detach "$current"
+          brew upgrade "$FORMULA"
+          ocmac app upgrade
+          ocmac prepare
+          sudo -- "$(command -v ocmac)" install
+
+      - name: Install with the published website command
+        if: inputs.previous_tap_commit == ''
+        run: |
+          python3 - <<'PY'
+          import os, pty
+          command = '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ValeraGin/openconnect-for-mac/main/install.sh)"'
+          raise SystemExit(os.waitstatus_to_exitcode(pty.spawn(['/bin/bash', '-c', command])))
+          PY
+
+      - name: Verify the installed package, app and helper
+        run: |
+          test "$(ocmac version)" = "ocmac $VERSION"
+          brew test "$FORMULA"
+          app="$HOME/Applications/OpenConnect for Mac.app"
+          "$app/Contents/MacOS/ocmac-app" --installation-check | tee "$RUNNER_TEMP/installed.json"
+          jq -e --arg version "$VERSION" '.clientAvailable and .appVersion == $version and .clientVersion == ("ocmac " + $version)' "$RUNNER_TEMP/installed.json"
+          cmp "$(brew --prefix "$FORMULA")/libexec/ocmac-helper" /usr/local/libexec/ocmac-helper
+          sudo -n /usr/local/libexec/ocmac-helper version
+          OCMAC_LANG=ru ocmac doctor | tee "$RUNNER_TEMP/doctor.txt"
+          grep -F 'Проблем не найдено.' "$RUNNER_TEMP/doctor.txt"
